@@ -18,8 +18,6 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
       AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})
 `);
 
-
-
 // Seperate members for each batch 
 fn(state => {
     const campaignMembers = state.references[0]['records'];
@@ -29,7 +27,7 @@ fn(state => {
     const contactsToCreate = [];
     const contactsToUpdate = [];
     for (const member of campaignMembers) {
-        if (member.CreatedDate === member.Contact.LastModifiedDate) { //update
+        if (member.CreatedDate > state.lastSyncTime) {
             contactsToCreate.push(member);
         }
         else {

@@ -1,0 +1,20 @@
+{
+    "start": "getCampaignMembers",
+    "jobs": [
+        {
+            "id": "getCampaignMembers",
+            "adaptor": "salesforce",
+            "configuration": "tmp/salesforce-creds.json",
+            "expression": "jobs/getCampaignMembers.js",
+            "next": {
+                "addOrUpdateMembers": "!state.errors"
+            }
+        },
+        {
+            "id": "addOrUpdateMembers",
+            "adaptor": "mailchimp",
+            "configuration": "tmp/mailchimp-creds.json",
+            "expression": "jobs/addOrUpdateMemberTags.js"
+        }
+    ]
+}

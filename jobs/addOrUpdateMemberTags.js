@@ -1,17 +1,13 @@
 // Contacts to create
 fn(state => {
-    
-    if(state.contactsToCreate.members.length === 0) {
-        return state;
-    } else {
-        return post('/lists/43fead6cd7',state.ContactsToCreate)(state);
-    }
+  const { contactsToCreate } = state;
+  if (contactsToCreate.members.length === 0) return state;
+  return post('/lists/a4e7ea0abc', contactsToCreate)(state);
 });
+
 // Contacts to update
 fn(state => {
-    if(state.contactsToUpdate.members.length === 0) {
-        return state;
-    } else {
-        return post('/lists/43fead6cd7',state.contactsToUpdate)(state);
-    }
+  const { contactsToUpdate } = state;
+  if (contactsToUpdate.members.length === 0) return state;
+  return post('/lists/a4e7ea0abc', contactsToUpdate)(state);
 });

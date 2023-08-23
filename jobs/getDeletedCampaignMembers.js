@@ -53,10 +53,14 @@ fn(state => {
 
   for (const member of deletedCampaignMembers) {
     const mappedMember = {
-      is_syncing: true,
-      // subscriber_hash: member.Email__c,
-      email_address: member.Email__c,
-      tags: [{ name: member.Nome_da_Tag__c, status: 'inactive' }],
+      method: 'POST',
+      path: `/lists/a4e7ea0abc/members/${member.Email__c}/tags`,
+      operation_id: `${member.Email__c}`,
+      body: JSON.stringify({
+        is_syncing: true,
+        subscriber_hash: member.Email__c,
+        tags: [{ name: member.Nome_da_Tag__c, status: 'inactive' }],
+      }),
     };
     mappedMembers.push(mappedMember);
   }

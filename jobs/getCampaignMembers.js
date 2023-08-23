@@ -28,13 +28,13 @@ fn(state => {
   // For contacts to create createdDate > state.lastSyncTime
   const contactsToCreate = {
     sync_tags: false,
-    update_existing: false,
+    update_existing: true,
     email_type: 'html',
     members: [],
   };
   const contactsToUpdate = {
     sync_tags: false,
-    update_existing: false,
+    update_existing: true,
     email_type: 'html',
     members: [],
   };

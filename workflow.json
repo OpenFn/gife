@@ -1,0 +1,20 @@
+{
+    "start": "getDeletedCampaignMembers",
+    "jobs": [
+        {
+            "id": "getDeletedCampaignMembers",
+            "adaptor": "salesforce",
+            "configuration": "tmp/salesforce-creds.json",
+            "expression": "jobs/getDeletedCampaignMembers.js",
+            "next": {
+                "removeDeletedMemberTags": "!state.errors"
+            }
+        },
+        {
+            "id": "removeDeletedMemberTags",
+            "adaptor": "mailchimp",
+            "configuration": "tmp/mailchimp-creds.json",
+            "expression": "jobs/removeDeletedMemberTags.js"
+        }
+    ]
+}

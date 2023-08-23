@@ -15,24 +15,49 @@ WHERE CreatedDate > ${state.lastSyncTime}
 `);
 
 //Map Salesforce deleted campaign members to prepare for post to mailchimp
+// fn(state => {
+//     const deletedCampaignMembers = state.references[0]['records'];
+//     const mappedMembers = [];
+
+//     for (const member of deletedCampaignMembers) {
+//         const mappedMember = {
+//             subscriber_hash: member.Email,
+//             tags: [
+//                 {
+//                     name: member.Nome_da_Tag__c,
+//                     status: "inactive"
+//                 }
+//             ],
+//             is_syncing: true
+//         };
+//         mappedMembers.push(mappedMember);
+//     }
+
+//     return { ...state, mappedMembers};
+// });
+
 fn(state => {
     const deletedCampaignMembers = state.references[0]['records'];
     const mappedMembers = [];
-
+  
     for (const member of deletedCampaignMembers) {
-        const mappedMember = {
-            subscriber_hash: member.Email__c,
-            tags: [
-                {
-                    name: member.Nome_da_Tag__c,
-                    status: "inactive"
-                }
-            ],
-            is_syncing: true
-        };
-        mappedMembers.push(mappedMember);
+      const mappedMember = {
+        subscriber_hash: member.Email__c,
+        tags: [
+          {
+            name: member.Nome_da_Tag__c,
+            status: "inactive",
+          },
+        ]
+      };
+      mappedMembers.push(mappedMember);
     }
-
-    return { ...state, mappedMembers};
-});
-
+  
+    //const chunkedMappedMembers = chunk(mappedMembers, 500);
+    return {
+      ...state,
+      references: [],
+      //mappedMembers: chunkedMappedMembers
+      members: [chunk(mappedMembers, 500)]
+    };
+  });

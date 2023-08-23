@@ -50,6 +50,6 @@ fn(state => {
   return {
     ...state,
     references: [],
-    members: [...chunk(membersToUpdate, 500), chunk(membersToCreate, 500)],
+    members: [...chunk(membersToUpdate, 500), ...chunk(membersToCreate, 500)],
   };
 });

@@ -5,7 +5,7 @@ each(
     sync_tags: false,
     update_existing: true,
     email_type: 'html',
-    members: state.data,
+    members: state.data[0],
   }))
 );
 

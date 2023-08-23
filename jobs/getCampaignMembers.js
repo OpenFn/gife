@@ -24,27 +24,16 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
 fn(state => {
   const campaignMembers = state.references[0]['records'];
 
-  console.log(campaignMembers, 'our members');
+  // console.log(campaignMembers, 'our members');
   // For contacts to create createdDate > state.lastSyncTime
-  const contactsToCreate = {
-    sync_tags: false,
-    update_existing: true,
-    email_type: 'html',
-    members: [],
-  };
-  const contactsToUpdate = {
-    sync_tags: false,
-    update_existing: true,
-    email_type: 'html',
-    members: [],
-  };
+  const membersToCreate = [];
+  const membersToUpdate = [];
 
   for (const member of campaignMembers) {
     const mappedMember = {
       subscriber_hash: member.Email,
       email_address: member.Email,
       full_name: member.fullName,
-
       merge_fields: {
         FNAME: member.FirstName,
         LNAME: member.LastName,
@@ -53,10 +42,14 @@ fn(state => {
       tags: [member.Campaign.Nome_da_tag__c],
     };
     if (member.CreatedDate > state.lastSyncTime) {
-      contactsToCreate.members.push({ ...mappedMember, status: 'subscribed' });
+      membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
-      contactsToUpdate.members.push(mappedMember);
+      membersToUpdate.push(mappedMember);
     }
   }
-  return { ...state, references: [], contactsToUpdate, contactsToCreate };
+  return {
+    ...state,
+    references: [],
+    members: [...chunk(membersToUpdate, 500), chunk(membersToCreate, 500)],
+  };
 });

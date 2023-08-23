@@ -1,13 +1,13 @@
-// Contacts to create
-fn(state => {
-  const { contactsToCreate } = state;
-  if (contactsToCreate.members.length === 0) return state;
-  return post('/lists/a4e7ea0abc', contactsToCreate)(state);
-});
+// Add or Update members to Mailchimp
+each(
+  'members[*]',
+  post('/lists/a4e7ea0abc', state => ({
+    sync_tags: false,
+    update_existing: true,
+    email_type: 'html',
+    members: state.data,
+  }))
+);
 
-// Contacts to update
-fn(state => {
-  const { contactsToUpdate } = state;
-  if (contactsToUpdate.members.length === 0) return state;
-  return post('/lists/a4e7ea0abc', contactsToUpdate)(state);
-});
+// Cleaning up state
+fn(state => ({ ...state, response: {} }));

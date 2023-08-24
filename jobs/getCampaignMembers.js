@@ -1,11 +1,15 @@
 // Setup lastSyncTime
 fn(state => {
-  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
+  const manualCursor = '2023-08-16T15:30:00.000Z';
   console.log(manualCursor, 'manualCursor');
 
   const lastSyncTime = state.lastRunTime || manualCursor;
-  return { ...state, lastSyncTime };
+  const lastRunTime = new Date().toISOString();
+  console.log('time at job start:' + lastRunTime);
+
+  return { ...state, lastSyncTime, lastRunTime };
 });
+
 
 // Get campaign members from Salesforce
 query(
@@ -47,6 +51,7 @@ fn(state => {
       membersToUpdate.push(mappedMember);
     }
   }
+
   return {
     ...state,
     references: [],

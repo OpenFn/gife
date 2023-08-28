@@ -1,18 +1,10 @@
-// //Contacts to deactivate
-// each(
-//     'members[*]',
-//     post('/lists/a4e7ea0abc/members/${'subscriber_hash'}/tags', state => ({
-//       is_syncing: true,
-//       members: state.data[0]
-//     }))
-//   );
-
-// /lists/a4e7ea0abc/members/${state.members.subscriber_hash}/tags
-fn(async state => {
-  for (const membersBatch of state.members) {
-    console.log(membersBatch);
-    await post('/batches', {
-      operations: membersBatch,
-    })(state);
-  }
-});
+//Sync contacts and create only active campaign tags
+each(
+  'members[*]',
+  post('/lists/a4e7ea0abc', state => ({
+    sync_tags: true,
+    update_existing: true,
+    email_type: 'html',
+    members: state.data,
+  }))
+);

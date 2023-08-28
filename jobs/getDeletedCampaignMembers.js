@@ -34,7 +34,7 @@ fn(state => {
     } else {
       mappedMembers.push({
         email_address: Email,
-        tags: [""],
+        tags: [],
       });
     }
   }

@@ -10,66 +10,39 @@ fn(state => {
 // Get deleted campaign members from Salesforce
 query(
   state => `
-SELECT Nome_da_Campanha__c, Nome_da_Tag__c, Nome_do_Membro_de_Campanha__c, Email__c
-FROM Deleted_Campaign_Member__c
-WHERE CreatedDate > ${state.lastSyncTime}
+SELECT Name, Email, (SELECT Campaign_Tag_Name__c FROM CampaignMembers
+  WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' and  Campaign.IsActive = true)
+FROM Contact
+WHERE Id in (SELECT Contact__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${state.lastSyncTime})
 `
 );
 
 //Map Salesforce deleted campaign members to prepare for post to mailchimp
-// fn(state => {
-//     const deletedCampaignMembers = state.references[0]['records'];
-//     const mappedMembers = [];
-
-//     for (const member of deletedCampaignMembers) {
-//         const mappedMember = {
-//             subscriber_hash: member.Email,
-//             tags: [
-//                 {
-//                     name: member.Nome_da_Tag__c,
-//                     status: "inactive"
-//                 }
-//             ],
-//             is_syncing: true
-//         };
-//         mappedMembers.push(mappedMember);
-//     }
-
-//     return { ...state, mappedMembers};
-// });
-
-// {
-//   subscriber_hash: member.Email__c,
-//   tags: [
-//     {
-//       name: member.Nome_da_Tag__c,
-//       status: "inactive",
-//     },
-//   ]
-// }
 fn(state => {
   const deletedCampaignMembers = state.references[0]['records'];
   const mappedMembers = [];
 
   for (const member of deletedCampaignMembers) {
-    const mappedMember = {
-      method: 'POST',
-      path: `/lists/a4e7ea0abc/members/${member.Email__c}/tags`,
-      operation_id: `${member.Email__c}`,
-      body: JSON.stringify({
-        is_syncing: true,
-        subscriber_hash: member.Email__c,
-        tags: [{ name: member.Nome_da_Tag__c, status: 'inactive' }],
-      }),
-    };
-    mappedMembers.push(mappedMember);
+    
+    const { CampaignMembers, Email } = member;
+    
+    if (CampaignMembers) {
+      mappedMembers.push({
+        email_address: Email,
+        tags: CampaignMembers.records.map(r => r.Campaign_Tag_Name__c),
+      });
+    } else {
+      mappedMembers.push({
+        email_address: Email,
+        tags: [""],
+      });
+    }
   }
 
   //const chunkedMappedMembers = chunk(mappedMembers, 500);
   return {
     ...state,
     references: [],
-    //mappedMembers: chunkedMappedMembers
     members: chunk(mappedMembers, 500),
   };
 });

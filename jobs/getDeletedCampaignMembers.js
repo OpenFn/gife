@@ -39,7 +39,6 @@ fn(state => {
     }
   }
 
-  //const chunkedMappedMembers = chunk(mappedMembers, 500);
   return {
     ...state,
     references: [],

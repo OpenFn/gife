@@ -27,7 +27,6 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
 // Seperate members for each batch
 fn(state => {
   const campaignMembers = state.references[0]['records'];
-
   const membersToCreate = [];
   const membersToUpdate = [];
 

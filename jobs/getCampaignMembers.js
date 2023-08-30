@@ -28,8 +28,6 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
 fn(state => {
   const campaignMembers = state.references[0]['records'];
 
-  // console.log(campaignMembers, 'our members');
-  // For contacts to create createdDate > state.lastSyncTime
   const membersToCreate = [];
   const membersToUpdate = [];
 

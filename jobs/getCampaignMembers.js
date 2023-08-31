@@ -42,7 +42,7 @@ fn(state => {
         MMERGE4: member.AccountId,
       },
       tags: [member.Campaign.Nome_da_tag__c],
-    };
+    }//;
     //if (member.CreatedDate > state.lastSyncTime) {
     //if (member.LastModifiedDate > state.lastSyncTime) {
     //  membersToCreate.push({ ...mappedMember, status: 'subscribed' });

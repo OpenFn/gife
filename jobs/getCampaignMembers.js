@@ -35,6 +35,7 @@ fn(state => {
       subscriber_hash: member.Email,
       email_address: member.Email,
       full_name: member.fullName,
+      status: 'subscribed',
       merge_fields: {
         FNAME: member.FirstName,
         LNAME: member.LastName,
@@ -43,11 +44,11 @@ fn(state => {
       tags: [member.Campaign.Nome_da_tag__c],
     };
     //if (member.CreatedDate > state.lastSyncTime) {
-    if (member.LastModifiedDate > state.lastSyncTime) {
-      membersToCreate.push({ ...mappedMember, status: 'subscribed' });
-    } else {
-      membersToUpdate.push(mappedMember);
-    }
+    //if (member.LastModifiedDate > state.lastSyncTime) {
+    //  membersToCreate.push({ ...mappedMember, status: 'subscribed' });
+    //} else {
+    //  membersToUpdate.push(mappedMember);
+    //}
   }
 
   return {

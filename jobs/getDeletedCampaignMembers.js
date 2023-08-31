@@ -1,6 +1,7 @@
 // Setup lastSyncTime
 fn(state => {
-  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
+//  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
+  const manualCursor = '2023-08-31T18:30:00.000Z'; // SF timestamp
   console.log(manualCursor, 'manualCursor');
 
   const lastSyncTime = state.lastRunTime || manualCursor;

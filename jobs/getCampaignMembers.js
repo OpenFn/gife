@@ -10,7 +10,6 @@ fn(state => {
   return { ...state, lastSyncTime, lastRunTime };
 });
 
-
 // Get campaign members from Salesforce
 query(
   state => `
@@ -43,7 +42,7 @@ fn(state => {
       tags: [member.Campaign.Nome_da_tag__c],
     };
     if (member.CreatedDate > state.lastSyncTime) {
-    //if (member.Contact.LastModifiedDate > state.lastSyncTime) {
+      //if (member.Contact.LastModifiedDate > state.lastSyncTime) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
       membersToUpdate.push(mappedMember);
@@ -54,5 +53,6 @@ fn(state => {
     ...state,
     references: [],
     members: [...chunk(membersToUpdate, 500), ...chunk(membersToCreate, 500)],
+    chunkErrors: [],
   };
 });

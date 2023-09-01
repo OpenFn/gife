@@ -1,21 +1,29 @@
 // Add or Update members to Mailchimp
 each(
   'members[*]',
-//  post('/lists/a4e7ea0abc', state => ({
-    post('/lists/a1262d3eab', state => ({
-    sync_tags: false,
-    update_existing: true,
-    email_type: 'html',
-    members: state.data,
-  }))
+  //  post('/lists/a4e7ea0abc', state => ({
+  post(
+    '/lists/a1262d3eab',
+    state => ({
+      sync_tags: false,
+      update_existing: true,
+      email_type: 'html',
+      members: state.data,
+    }),
+    {},
+    state => {
+      state.chunkErrors.push(state.response.errors);
+      return state;
+    }
+  )
 );
 
 // Alert admin if response has errors
 fn(state => {
-  // Check if response has errors
-  const { errors, error_count } = state.response;
-  if (error_count > 0) {
-    throw new Error(JSON.stringify(errors, null, 2));
+  // Check if chunks response has errors
+  const chunkErrors = state.chunkErrors.flat();
+  if (chunkErrors.length > 0) {
+    throw new Error(JSON.stringify(chunkErrors, null, 2));
   }
   return state;
 });

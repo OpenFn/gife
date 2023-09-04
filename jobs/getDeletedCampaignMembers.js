@@ -43,5 +43,6 @@ fn(state => {
     ...state,
     references: [],
     members: chunk(mappedMembers, 500),
+    chunkErrors: [],
   };
 });

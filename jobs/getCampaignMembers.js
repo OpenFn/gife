@@ -31,7 +31,7 @@ fn(state => {
 
   for (const member of campaignMembers) {
     const mappedMember = {
-      subscriber_hash: member.Email,
+      //subscriber_hash: member.Email,
       email_address: member.Email,
       full_name: member.fullName,
       merge_fields: {
@@ -49,10 +49,41 @@ fn(state => {
     }
   }
 
+  let mergeCreateMemberTags = {};
+  let mergeUpdateMemberTags = {};
+
+  if (membersToCreate.length > 0) {
+    const mergeCreateMemberTags = [...membersToCreate].reduce(
+      (result, item) => {
+        const key = item.email_address;
+        if (!result[key]) {
+          result[key] = [];
+        }
+        result[key].push(item.tags[0]);
+        return result;
+      },
+      {}
+    );
+  };
+
+  if (membersToUpdate.length > 0) {
+    const mergeUpdateMemberTags = [...membersToUpdate].reduce(
+      (result, item) => {
+        const key = item.email_address;
+        if (!result[key]) {
+          result[key] = [];
+        }
+        result[key].push(item.tags[0]);
+        return result;
+      },
+      {}
+    );
+  };
+
   return {
     ...state,
     references: [],
-    members: [...chunk(membersToUpdate, 500), ...chunk(membersToCreate, 500)],
+    members: [...chunk(mergeCreateMemberTags, 500), ...chunk(mergeUpdateMemberTags, 500)],
     chunkErrors: [],
   };
 });

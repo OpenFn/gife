@@ -53,26 +53,36 @@ fn(state => {
   let mergeUpdateMemberTags = {};
 
   if (membersToCreate.length > 0) {
-    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {
-      const key = item.email_address;
-      if (!result[key]) {
-        result[key] = [];
-      }
-      result[key] = result[key].concat(item.tags);
-      return result;
-    }, {});
-  }
-  
+    // console.log("Creating members:");
+    // console.log(membersToCreate);
+    mergeCreateMemberTags = [...membersToCreate].reduce(
+      (result, item) => {
+        const key = item.email_address;
+        if (!result[key]) {
+          result[key] = [];
+        }
+        result[key].push(item.tags);
+        return result;
+      },
+      {}
+    );
+  };
+
   if (membersToUpdate.length > 0) {
-    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {
-      const key = item.email_address;
-      if (!result[key]) {
-        result[key] = [];
-      }
-      result[key] = result[key].concat(item.tags);
-      return result;
-    }, {});
-  }
+    // console.log("Updating members:");
+    // console.log(membersToUpdate);
+    mergeUpdateMemberTags = [...membersToUpdate].reduce(
+      (result, item) => {
+        const key = item.email_address;
+        if (!result[key]) {
+          result[key] = [];
+        }
+        result[key].push(item.tags);
+        return result;
+      },
+      {}
+    );
+  };
 
   return {
     ...state,

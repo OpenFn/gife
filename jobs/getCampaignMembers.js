@@ -53,8 +53,6 @@ fn(state => {
   let mergeUpdateMemberTags = {};
 
   if (membersToCreate.length > 0) {
-    // console.log("Creating members:");
-    // console.log(membersToCreate);
     mergeCreateMemberTags = [...membersToCreate].reduce(
       (result, item) => {
         const key = item.email_address;
@@ -69,8 +67,6 @@ fn(state => {
   };
 
   if (membersToUpdate.length > 0) {
-    // console.log("Updating members:");
-    // console.log(membersToUpdate);
     mergeUpdateMemberTags = [...membersToUpdate].reduce(
       (result, item) => {
         const key = item.email_address;

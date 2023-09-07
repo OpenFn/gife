@@ -49,41 +49,57 @@ fn(state => {
     }
   }
 
-  let mergeCreateMemberTags = {};
-  let mergeUpdateMemberTags = {};
+  let mergeCreateMemberTags = [];
+  let mergeUpdateMemberTags = [];
 
   if (membersToCreate.length > 0) {
-    mergeCreateMemberTags = [...membersToCreate].reduce(
-      (result, item) => {
-        const key = item.email_address;
-        if (!result[key]) {
-          result[key] = [];
-        }
-        result[key].push(item.tags);
-        return result;
-      },
-      {}
+    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {
+      const existingItem = result.find(
+        existing => existing.email_address === item.email_address
+      );
+
+      if (existingItem) {
+        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
+      } else {
+        result.push(item);
+        console.log('here is the result' + result);
+      }
+
+      return result;
+    }, []);
+    console.log(
+      'here is members to create merged: ' +
+        JSON.stringify(mergeCreateMemberTags)
     );
-  };
+  }
 
   if (membersToUpdate.length > 0) {
-    mergeUpdateMemberTags = [...membersToUpdate].reduce(
-      (result, item) => {
-        const key = item.email_address;
-        if (!result[key]) {
-          result[key] = [];
-        }
-        result[key].push(item.tags);
-        return result;
-      },
-      {}
+    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {
+      const existingItem = result.find(
+        existing => existing.email_address === item.email_address
+      );
+
+      if (existingItem) {
+        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
+      } else {
+        result.push(item);
+        console.log('here is the result' + result);
+      }
+      return result;
+    }, []);
+    console.log(
+      'here is members to create merged: ' +
+        JSON.stringify(mergeUpdateMemberTags)
     );
-  };
+  }
 
   return {
     ...state,
     references: [],
-    members: [...chunk(mergeCreateMemberTags, 500), ...chunk(mergeUpdateMemberTags, 500)],
+    members: [
+      ...chunk(mergeCreateMemberTags, 500),
+      ...chunk(mergeUpdateMemberTags, 500),
+    ],
     chunkErrors: [],
   };
 });

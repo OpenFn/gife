@@ -31,7 +31,6 @@ fn(state => {
 
   for (const member of campaignMembers) {
     const mappedMember = {
-      //subscriber_hash: member.Email,
       email_address: member.Email,
       full_name: member.fullName,
       merge_fields: {
@@ -62,15 +61,10 @@ fn(state => {
         existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
       } else {
         result.push(item);
-        console.log('here is the result' + result);
       }
 
       return result;
     }, []);
-    console.log(
-      'here is members to create merged: ' +
-        JSON.stringify(mergeCreateMemberTags)
-    );
   }
 
   if (membersToUpdate.length > 0) {
@@ -83,14 +77,9 @@ fn(state => {
         existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
       } else {
         result.push(item);
-        console.log('here is the result' + result);
       }
       return result;
     }, []);
-    console.log(
-      'here is members to create merged: ' +
-        JSON.stringify(mergeUpdateMemberTags)
-    );
   }
 
   return {

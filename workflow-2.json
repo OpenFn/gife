@@ -7,7 +7,7 @@
             "configuration": "tmp/salesforce-creds.json",
             "expression": "jobs/getDeletedCampaignMembers.js",
             "next": {
-                "removeDeletedMemberTags": "state.errors"
+                "removeDeletedMemberTags": "!state.errors"
             }
         },
         {

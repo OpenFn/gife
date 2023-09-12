@@ -10,24 +10,46 @@ fn(state => {
   return { ...state, lastSyncTime, lastRunTime };
 });
 
-// Get campaign members from Salesforce
 query(
   state => `
 SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
-       Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
-       Campaign.Name, Campaign.Nome_da_Tag__c
+     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
+     Campaign.Name, Campaign.Nome_da_Tag__c
 FROM CampaignMember
 WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
-      AND Campaign.IsActive = true
-      AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})
+    AND Campaign.IsActive = true
+    AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})
 `
 );
 
+// Retrieving the Remaining SOQL Query Results If we have more than 2000 records
+fn(state => {
+  const totalSize = state.references[0]['totalSize'];
+  if (totalSize > 2000) {
+    for (let offset = 2000; offset < totalSize; offset += 2000) {
+      console.log('Querying data from', offset);
+      state = query(`
+      SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
+           Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
+           Campaign.Name, Campaign.Nome_da_Tag__c
+      FROM CampaignMember
+      WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
+          AND Campaign.IsActive = true
+          AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime}) OFFSET ${offset}
+      `)(state);
+    }
+  }
+
+  return state;
+});
+
 // Seperate members for each batch
 fn(state => {
-  const campaignMembers = state.references[0]['records'];
+  const campaignMembers = state.references.map(ref => ref.records).flat();
   const membersToCreate = [];
   const membersToUpdate = [];
+
+  console.log(campaignMembers.length, 'campaignMembers');
 
   for (const member of campaignMembers) {
     const mappedMember = {
@@ -41,12 +63,14 @@ fn(state => {
       tags: [member.Campaign.Nome_da_tag__c],
     };
     if (member.CreatedDate > state.lastSyncTime) {
-      //if (member.Contact.LastModifiedDate > state.lastSyncTime) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
       membersToUpdate.push(mappedMember);
     }
   }
+
+  console.log(membersToCreate.length, 'membersToCreate before merge tags');
+  console.log(membersToUpdate.length, 'membersToUpdate before merge tags');
 
   let mergeCreateMemberTags = [];
   let mergeUpdateMemberTags = [];
@@ -81,6 +105,16 @@ fn(state => {
       return result;
     }, []);
   }
+
+  console.log(
+    mergeCreateMemberTags.length,
+    'mergeCreateMemberTags after merge tags'
+  );
+
+  console.log(
+    mergeUpdateMemberTags.length,
+    'mergeUpdateMemberTags after merge tags'
+  );
 
   return {
     ...state,

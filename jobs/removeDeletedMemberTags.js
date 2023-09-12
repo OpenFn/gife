@@ -1,7 +1,6 @@
 //Sync contacts and create only active campaign tags
 each(
   'members[*]',
-  //post('/lists/a4e7ea0abc', state => ({
   post(
     '/lists/a1262d3eab',
     state => ({

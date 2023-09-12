@@ -19,7 +19,10 @@ WHERE Id in (SELECT Contact__c FROM Deleted_Campaign_Member__c WHERE CreatedDate
 
 //Map Salesforce deleted campaign members to prepare for post to mailchimp
 fn(state => {
-  const deletedCampaignMembers = state.references[0]['records'];
+  const deletedCampaignMembers = state.references
+    .map(ref => ref.records)
+    .flat();
+
   const mappedMembers = [];
 
   for (const member of deletedCampaignMembers) {

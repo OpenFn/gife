@@ -17,6 +17,24 @@ WHERE Id in (SELECT Contact__c FROM Deleted_Campaign_Member__c WHERE CreatedDate
 `
 );
 
+// Retrieving the Remaining SOQL Query Results If we have more than 2000 records
+fn(state => {
+  const totalSize = state.references[0]['totalSize'];
+  if (totalSize > 2000) {
+    for (let offset = 2000; offset < totalSize; offset += 2000) {
+      console.log('Querying data from', offset);
+      state = query(`
+      SELECT Name, Email, (SELECT Campaign_Tag_Name__c FROM CampaignMembers
+        WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' and  Campaign.IsActive = true)
+      FROM Contact
+      WHERE Id in (SELECT Contact__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${state.lastSyncTime}) OFFSET ${offset}
+      `)(state);
+    }
+  }
+
+  return state;
+});
+
 //Map Salesforce deleted campaign members to prepare for post to mailchimp
 fn(state => {
   const deletedCampaignMembers = state.references

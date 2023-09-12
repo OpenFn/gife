@@ -27,6 +27,7 @@ fn(state => {
   const totalSize = state.references[0]['totalSize'];
   if (totalSize > 2000) {
     for (let offset = 2000; offset < totalSize; offset += 2000) {
+      console.log('Querying data from', offset);
       state = query(`
       SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
            Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,

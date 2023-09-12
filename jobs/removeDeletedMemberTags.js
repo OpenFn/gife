@@ -2,17 +2,19 @@
 each(
   'members[*]',
   //post('/lists/a4e7ea0abc', state => ({
-    post('/lists/a1262d3eab', state => ({
-    sync_tags: true,
-    update_existing: true,
-    email_type: 'html',
-    members: state.data,
-  }),
-  {},
-  state => {
-    state.chunkErrors.push(state.response.errors);
-    return state;
-  }
+  post(
+    '/lists/a1262d3eab',
+    state => ({
+      sync_tags: true,
+      update_existing: true,
+      email_type: 'html',
+      members: state.data,
+    }),
+    {},
+    state => {
+      state.chunkErrors.push(state.response.errors);
+      return state;
+    }
   )
 );
 

@@ -23,9 +23,8 @@ fn(state => {
   const mappedMembers = [];
 
   for (const member of deletedCampaignMembers) {
-    
     const { CampaignMembers, Email } = member;
-    
+
     if (CampaignMembers) {
       mappedMembers.push({
         email_address: Email,

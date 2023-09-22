@@ -32,41 +32,40 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign
 
 fn(state => {
   const deletedCampaignMembers = state.data;
-
-  const mappedMember = [];
   let mergeMemberTags = [];
 
   for (const member of deletedCampaignMembers) {
-    const mappedMember = {
-      email_address: member["Contact.Email"],
-      tags: [member.Campaign_Tag_Name__c],
-    };
+    const email = member["Contact.Email"];
+    const campaignName = member.Campaign_Tag_Name__c;
 
-    if (mappedMember.length > 0) {
-      mergeMemberTags = mappedMember.reduce((result, item) => {
-        const existingItem = result.find(
-          existing => existing.email_address === item.email_address
-        );
-  
-        if (existingItem) {
-          existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
-        } else {
-          result.push(item);
-        }
-  
-        return result;
-      }, []);
+    // Find the existing mapped member for this email
+    const existingMember = mergeMemberTags.find(item => item.email_address === email);
+
+    if (existingMember) {
+      // If the email already exists, add the campaign name to its tags array
+      existingMember.tags.push(campaignName);
+    } else {
+      // If the email doesn't exist, create a new mapped member
+      const newMember = {
+        email_address: email,
+        tags: [campaignName],
+      };
+      mergeMemberTags.push(newMember);
     }
+  }
 
-    return {
-      ...state,
-      references: [],
-      members: [
-        ...chunk(mergeMemberTags, 500),
-      ],
-      chunkErrors: [],
-    };
-}});
+  console.log(mergeMemberTags.length, 'Mapped members');
+
+  return {
+    ...state,
+    references: [],
+    members: [
+      ...chunk(mergeMemberTags, 500),
+    ],
+    chunkErrors: [],
+  };
+});
+
 
 //Map Salesforce deleted campaign members to prepare for post to mailchimp
 // fn(state => {

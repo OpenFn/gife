@@ -54,8 +54,6 @@ fn(state => {
     }
   }
 
-  console.log(mergeMemberTags.length, 'Mapped members');
-
   return {
     ...state,
     references: [],
@@ -65,38 +63,3 @@ fn(state => {
     chunkErrors: [],
   };
 });
-
-
-//Map Salesforce deleted campaign members to prepare for post to mailchimp
-// fn(state => {
-//   const deletedCampaignMembers = state.data;
-
-//   console.log ('deletedCampaignMembers count', deletedCampaignMembers.length);
-
-//   const mappedMembers = [];
-
-//   for (const member of deletedCampaignMembers) {
-//     const { CampaignMembers, Email } = member;
-
-//     if (CampaignMembers) {
-//       mappedMembers.push({
-//         email_address: Email,
-//         tags: CampaignMembers.records.map(r => r.Campaign_Tag_Name__c),
-//       });
-//     } else {
-//       mappedMembers.push({
-//         email_address: Email,
-//         tags: [],
-//       });
-//     }
-//   }
-
-//   console.log(mappedMembers.length, 'Mapped members');
-
-//   return {
-//     ...state,
-//     references: [],
-//     members: chunk(mappedMembers, 500),
-//     chunkErrors: [],
-//   };
-// });

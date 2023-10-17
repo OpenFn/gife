@@ -54,6 +54,8 @@ fn(state => {
     }
   }
 
+  console.log(mergeMemberTags.length, 'Retrieved mapped members');
+
   return {
     ...state,
     references: [],

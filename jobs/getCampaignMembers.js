@@ -10,7 +10,7 @@ fn(state => {
   return { ...state, lastSyncTime, lastRunTime };
 });
 
-query(
+bulkQuery(
   state => `
 SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
      Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
@@ -22,30 +22,9 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
 `
 );
 
-// Retrieving the Remaining SOQL Query Results If we have more than 2000 records
+//Seperate members for each batch
 fn(state => {
-  const totalSize = state.references[0]['totalSize'];
-  if (totalSize > 2000) {
-    for (let offset = 2000; offset < totalSize; offset += 2000) {
-      console.log('Querying data from', offset);
-      state = query(`
-      SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
-           Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
-           Campaign.Name, Campaign.Nome_da_Tag__c
-      FROM CampaignMember
-      WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
-          AND Campaign.IsActive = true
-          AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime}) OFFSET ${offset}
-      `)(state);
-    }
-  }
-
-  return state;
-});
-
-// Seperate members for each batch
-fn(state => {
-  const campaignMembers = state.references.map(ref => ref.records).flat();
+  const campaignMembers = state.data;
   const membersToCreate = [];
   const membersToUpdate = [];
 
@@ -54,13 +33,13 @@ fn(state => {
   for (const member of campaignMembers) {
     const mappedMember = {
       email_address: member.Email,
-      full_name: member.fullName,
+      full_name: member.Name,
       merge_fields: {
         FNAME: member.FirstName,
         LNAME: member.LastName,
-        MMERGE4: member.AccountId,
+        MMERGE4: member["Contact.AccountId"],
       },
-      tags: [member.Campaign.Nome_da_tag__c],
+      tags: [member["Campaign.Nome_da_tag__c"]],
     };
     if (member.CreatedDate > state.lastSyncTime) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });

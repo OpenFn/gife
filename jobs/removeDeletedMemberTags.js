@@ -2,7 +2,7 @@
 each(
   'members[*]',
   post(
-    '/lists/a1262d3eab',
+    '/lists/a2ff510317',
     state => ({
       sync_tags: true,
       update_existing: true,

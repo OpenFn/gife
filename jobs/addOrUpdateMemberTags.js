@@ -2,7 +2,7 @@
 each(
   '$.members[*]',
   post(
-    '/lists/a1262d3eab',
+    '/lists/a2ff510317',
     state => {
       console.log(`Upserting ${state.data.length} members...`);
       return {

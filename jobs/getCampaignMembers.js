@@ -18,7 +18,7 @@ SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
 FROM CampaignMember
 WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
     AND Campaign.IsActive = true
-    AND (Contact.LastModifiedDate > '2023-08-16T15:30:00.000Z' OR CreatedDate > '2023-08-16T15:30:00.000Z')
+    AND (Contact.LastModifiedDate > 2023-08-16T15:30:00.000Z OR CreatedDate > 2023-08-16T15:30:00.000Z)
 `
 );
 

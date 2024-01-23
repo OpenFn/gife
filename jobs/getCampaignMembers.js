@@ -41,11 +41,11 @@ fn(state => {
       },
       tags: [member["Campaign.Nome_da_tag__c"]],
     };
-    if (member.CreatedDate > state.lastSyncTime) {
+    if ((member.LastModifiedDate > state.lastSyncTime) || (member.CreatedDate > state.lastSyncTime)) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
       membersToUpdate.push(mappedMember);
-    }
+ }
   }
 
   console.log(membersToCreate.length, 'membersToCreate before merge tags');

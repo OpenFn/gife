@@ -4,7 +4,8 @@ fn(state => {
   console.log(manualCursor, 'manualCursor');
 
   const lastSyncTime = state.lastRunTime || manualCursor;
-  return { ...state, lastSyncTime };
+  const lastRunTime = new Date().toISOString();
+  return { ...state, lastSyncTime, lastRunTime};
 });
 
 //Get Deleted Campaign Member Records in Salesforce since last run

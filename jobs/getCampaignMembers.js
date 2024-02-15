@@ -1,6 +1,6 @@
 // Setup lastSyncTime
 fn(state => {
-  const manualCursor = '2023-08-16T15:30:00.000Z';
+  const manualCursor = '2024-02-15T09:40:35.970Z';
   console.log(manualCursor, 'manualCursor');
 
   const lastSyncTime = state.lastRunTime || manualCursor;
@@ -41,7 +41,7 @@ fn(state => {
       },
       tags: [member["Campaign.Nome_da_tag__c"]],
     };
-    if ((member.LastModifiedDate > state.lastSyncTime) || (member.CreatedDate > state.lastSyncTime)) {
+    if ((member["Contact.LastModifiedDate"] > state.lastSyncTime) || (member.CreatedDate > state.lastSyncTime)) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
       membersToUpdate.push(mappedMember);

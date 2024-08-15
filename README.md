@@ -32,7 +32,7 @@ a branch!_
 ## Documentation & Training Materials
 - Vera-OpenFn [Shared Drive Folder](https://drive.google.com/drive/u/0/folders/1dMuhErl8tuTV7Il1SrLDSux0XhgKohHT)
 - [Slides](https://docs.google.com/presentation/d/197bEm2ozVsuy8HaH3o0FYmq83fnK4bSfBzKuv9M48TQ/edit?usp=sharing) from OpenFn v2 Training
-- [See Recording][(https://drive.google.com/file/d/1l2SyyarwRBNekblxSc4c-8vfrSPtP6PI/view?usp=sharing](https://drive.google.com/file/d/1l2SyyarwRBNekblxSc4c-8vfrSPtP6PI/view?usp=sharing_eil_se_dm&ts=663aa23d) of the GIFE Admin Training
+- [Video recording](https://drive.google.com/file/d/1l2SyyarwRBNekblxSc4c-8vfrSPtP6PI/view?usp=sharing) of the GIFE Admin Training
 
 
 ## Getting started with the Repo

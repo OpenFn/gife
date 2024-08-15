@@ -29,6 +29,12 @@ to send email communication.
 _Note that commits to `main` will be auto-deployed to OpenFn.org. Always work on
 a branch!_
 
+## Documentation & Training Materials
+- Vera-OpenFn [Shared Drive Folder](https://drive.google.com/drive/u/0/folders/1dMuhErl8tuTV7Il1SrLDSux0XhgKohHT)
+- [Slides](https://docs.google.com/presentation/d/197bEm2ozVsuy8HaH3o0FYmq83fnK4bSfBzKuv9M48TQ/edit?usp=sharing) from OpenFn v2 Training
+- [See Recording][(https://drive.google.com/file/d/1l2SyyarwRBNekblxSc4c-8vfrSPtP6PI/view?usp=sharing](https://drive.google.com/file/d/1l2SyyarwRBNekblxSc4c-8vfrSPtP6PI/view?usp=sharing_eil_se_dm&ts=663aa23d) of the GIFE Admin Training
+
+
 ## Getting started with the Repo
 
 1. create `/tmp` folder locally with a `state.json` file that you don't commit
@@ -41,17 +47,9 @@ a branch!_
 for a template work plan for the OpenFn implementation, or contact
 support@openfn.org to get the Asana-version of this checklist.
 
-## Administration
+## Provisioning, Hosting, & Maintenance
 
-### Provisioning, Hosting, & Maintenance
+- Deployment: SaaS
+- Platform Version: OpenFn V1 (pending migration to V2)
+- Support POC: Vera Solutions (with OpenFn assistance - contact us at support@openfn.org)
 
-- Deployment: SaaS or Local?
-- Platform Version: OpenFn V1
-- Maintenance: Team responsible for software maintenance, security updates,
-  etc. - confirm roles & responsibilities across systems
-
-### Support
-
-_List relevant support point of contacts and system administrators._
-
-- {Contact1}

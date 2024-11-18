@@ -1,0 +1,357 @@
+name: gife-salesforce-to-mailchimp
+description: null
+credentials:
+  eassis@verasolutions.org-GIFE-Production-Salesforce---Emilie:
+    name: GIFE Production Salesforce - Emilie
+    owner: eassis@verasolutions.org
+  efantozzi@verasolutions.org-GIFE---MailChimp:
+    name: GIFE - MailChimp
+    owner: efantozzi@verasolutions.org
+  efantozzi@verasolutions.org-GIFE---MailChimp-Teste:
+    name: GIFE - MailChimp Teste
+    owner: efantozzi@verasolutions.org
+  efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan:
+    name: GIFE - Salesforce Production - Evan
+    owner: efantozzi@verasolutions.org
+  mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari:
+    name: GIFE Production Salesforce - Mari
+    owner: mribeirocruz@verasolutions.org
+  mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2:
+    name: Sandbox - OpenFn Mailchimp integration 2
+    owner: mribeirocruz@verasolutions.org
+  sverma@verasolutions.org-Sandbox-Mailchimp-Shreya:
+    name: Sandbox Mailchimp Shreya
+    owner: sverma@verasolutions.org
+  wavila@verasolutions.org-Mailchimp---Will---Test-enviroment-3:
+    name: Mailchimp - Will - Test enviroment 3
+    owner: wavila@verasolutions.org
+  wavila@verasolutions.org-Mailchimp-HTTP---test-credential:
+    name: Mailchimp HTTP - test credential
+    owner: wavila@verasolutions.org
+workflows:
+  "Remove-Deleted-Campaign-Members/Tags":
+    name: 'Remove Deleted Campaign Members/Tags'
+    jobs:
+      Get-deleted-campaign-members:
+        name: Get deleted campaign members
+        adaptor: '@openfn/language-salesforce@latest'
+        credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
+        body: |
+          fn(state => {
+            const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
+            console.log(manualCursor, 'manualCursor');
+            const lastSyncTime = state.lastRunTime || manualCursor;
+            const lastRunTime = new Date().toISOString();
+            return { ...state, lastSyncTime, lastRunTime };
+          });
+          //Get Deleted Campaign Member Records in Salesforce since last run
+          bulkQuery(
+            state => `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c
+          FROM Deleted_Campaign_Member__c
+          WHERE CreatedDate > ${state.lastSyncTime}`,
+            {},
+            state => {
+              const contactIdsList = state.data
+                .map(contact => contact['Contact__r.Id'])
+                .filter(id => id)
+                .map(id => `'${id}'`)
+                .join(', ');
+              return { ...state, contactIdsList };
+            }
+          );
+          //Get corresponding Campaign Member details for Deleted Campaign Members
+          bulkQuery(
+            state => `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c
+          FROM CampaignMember
+          WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${state.contactIdsList})`
+          );
+
+          fn(state => {
+            const deletedCampaignMembers = state.data;
+            console.log(deletedCampaignMembers.length, 'deletedMembersLength');
+            if (deletedCampaignMembers.length > 0) {
+              let mergeMemberTags = [];
+              for (const member of deletedCampaignMembers) {
+                const email = member["Contact.Email"];
+                const campaignName = member.Campaign_Tag_Name__c;
+                // Find the existing mapped member for this email
+                const existingMember = mergeMemberTags.find(item => item.email_address === email);
+                if (existingMember) {
+                  // If the email already exists, add the campaign name to its tags array
+                  existingMember.tags.push(campaignName);
+                } else {
+                  // If the email doesn't exist, create a new mapped member
+                  const newMember = {
+                    email_address: email,
+                    tags: [campaignName].map(str => str.replace(/\n/g, '')),
+                    email_type: "html"
+                  };
+                  mergeMemberTags.push(newMember);
+                }
+              }
+              console.log(mergeMemberTags.length, 'Retrieved mapped members');
+
+              return {
+                ...state,
+                references: [],
+                members: [
+                  ...chunk(mergeMemberTags, 500),
+                ],
+                chunkErrors: [],
+              };
+            }
+            else {
+              console.log('No contact IDs found. Skipping second bulk query.');
+              return state;
+            }
+          });
+      Remove-deleted-members-tags:
+        name: Remove deleted members tags
+        adaptor: '@openfn/language-mailchimp@latest'
+        credential: wavila@verasolutions.org-Mailchimp---Will---Test-enviroment-3
+        body: |
+          //Sync contacts and create only active campaign tags
+          each(
+            $.members,
+            // post(
+            //   //'/lists/43fead6cd7',
+            //   '/lists/8eec4f86ed',
+            //   {
+            //     body: {
+            //       sync_tags: true,
+            //       update_existing: true,
+            //       email_type: 'html',
+            //       members: $.data,
+            //     },
+            //     headers: { 'content-type': 'application/json' },
+            //   },
+            //   state => {
+            //     state.chunkErrors.push(state.response.errors);
+            //     return state;
+            //   }
+            // )
+           post(
+              //    '/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,
+              "/lists/8eec4f86ed",
+              //    '/lists/a2ff510317', //will enviroment test 3
+              {
+                sync_tags: true,
+                update_existing: true,
+                members: $.data,
+              },
+              {},
+              (state) => {
+                //console.log(JSON.stringify(state.response.errors), 'Empty');
+                state.chunkErrors = state.chunkErrors || [];
+                state.chunkErrors.push(state.response.errors);
+                return state;
+              }
+            ).catch((error, state) => {
+              console.log(error);
+              return state;
+            })
+          );
+
+          // Alert admin if response has errors
+          fn((state) => {
+            //state.chunkErrors = state.chunkErrors || [];
+            // Check if response has errors
+          const chunkErrors = state.chunkErrors.flat().filter(Boolean);
+            if (chunkErrors.length > 0) {
+              throw new Error(JSON.stringify(chunkErrors, null, 2));
+            }
+            return state;
+          });
+
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '*/150 * * * *'
+        enabled: false
+    edges:
+      cron->Get-deleted-campaign-members:
+        source_trigger: cron
+        target_job: Get-deleted-campaign-members
+        condition_type: always
+        enabled: true
+      Get-deleted-campaign-members->Remove-deleted-members-tags:
+        source_job: Get-deleted-campaign-members
+        target_job: Remove-deleted-members-tags
+        condition_type: on_job_success
+        enabled: true
+  Upsert-Members:
+    name: Upsert Members
+    jobs:
+      Get-members-for-upsert:
+        name: Get members for upsert
+        adaptor: '@openfn/language-salesforce@latest'
+        credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
+        body: |
+          // Setup lastSyncTime
+          fn(state => {
+            const manualCursor = '2024-08-10T15:30:00.000Z';
+            console.log(manualCursor, 'manualCursor');
+
+            const lastSyncTime = state.lastRunTime || manualCursor;
+            const lastRunTime = new Date().toISOString();
+            console.log('time at job start:' + lastRunTime);
+
+            return { ...state, lastSyncTime, lastRunTime };
+          });
+
+          bulkQuery(
+            state => `
+          SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
+               Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
+               Campaign.Name, Campaign.Nome_da_Tag__c
+          FROM CampaignMember
+          WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
+              AND Campaign.IsActive = true
+              AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})
+          `
+          );
+
+          //Seperate members for each batch
+          fn(state => {
+            const campaignMembers = state.data;
+            const membersToCreate = [];
+            const membersToUpdate = [];
+
+            console.log(campaignMembers.length, 'campaignMembers');
+
+            for (const member of campaignMembers) {
+              const mappedMember = {
+                email_address: member.Email,
+                full_name: member.Name,
+                merge_fields: {
+                  FNAME: member.FirstName,
+                  LNAME: member.LastName,
+                  MMERGE4: member["Contact.AccountId"],
+                },
+                tags: [member["Campaign.Nome_da_tag__c"]],
+              };
+              if ((member["Contact.LastModifiedDate"] > state.lastSyncTime) || (member.CreatedDate > state.lastSyncTime)) {
+                membersToCreate.push({ ...mappedMember, status: 'subscribed' });
+              } else {
+                membersToUpdate.push(mappedMember);
+           }
+            }
+
+            console.log(membersToCreate.length, 'membersToCreate before merge tags');
+            console.log(membersToUpdate.length, 'membersToUpdate before merge tags');
+
+            let mergeCreateMemberTags = [];
+            let mergeUpdateMemberTags = [];
+
+            if (membersToCreate.length > 0) {
+              mergeCreateMemberTags = membersToCreate.reduce((result, item) => {
+                const existingItem = result.find(
+                  existing => existing.email_address === item.email_address
+                );
+
+                if (existingItem) {
+                  existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
+                } else {
+                  result.push(item);
+                }
+
+                return result;
+              }, []);
+            }
+
+            if (membersToUpdate.length > 0) {
+              mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {
+                const existingItem = result.find(
+                  existing => existing.email_address === item.email_address
+                );
+
+                if (existingItem) {
+                  existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];
+                } else {
+                  result.push(item);
+                }
+                return result;
+              }, []);
+            }
+
+            console.log(
+              mergeCreateMemberTags.length,
+              'mergeCreateMemberTags after merge tags'
+            );
+
+            console.log(
+              mergeUpdateMemberTags.length,
+              'mergeUpdateMemberTags after merge tags'
+            );
+
+            return {
+              ...state,
+              references: [],
+              members: [
+                ...chunk(mergeCreateMemberTags, 500),
+                ...chunk(mergeUpdateMemberTags, 500),
+              ],
+              chunkErrors: [],
+            };
+          });
+
+      Add-or-update-member-tags:
+        name: Add or update member tags
+        adaptor: '@openfn/language-mailchimp@latest'
+        credential: efantozzi@verasolutions.org-GIFE---MailChimp
+        body: |
+          // Add or Update members to Mailchimp
+          each(
+            '$.members[*]',
+            post(
+            '/lists/43fead6cd7',
+             
+              state => {
+                console.log(`Upserting ${state.data.length} members...`);
+                return {
+                  sync_tags: false,
+                  update_existing: true,
+                  email_type: 'html',
+                  members: state.data,
+                };
+              },
+              {},
+              state => {
+                if (state.response.total_created > 0)
+                  console.log(`Added ${state.response.total_created} members`);
+                if (state.response.total_updated > 0)
+                  console.log(`Updated ${state.response.total_updated} members`);
+
+                if (state.response.error_count > 0)
+                  state.chunkErrors.push(state.response.errors);
+                return state;
+              }
+            )
+          );
+
+          // Alert admin if response has errors
+          fn(state => {
+            // Check if chunks response has errors
+            const chunkErrors = state.chunkErrors.flat();
+            if (chunkErrors.length > 0) {
+              throw new Error(JSON.stringify(chunkErrors, null, 2));
+            }
+            return state;
+          });
+
+    triggers:
+      cron:
+        type: cron
+        cron_expression: '*/150 * * * *'
+        enabled: true
+    edges:
+      cron->Get-members-for-upsert:
+        source_trigger: cron
+        target_job: Get-members-for-upsert
+        condition_type: always
+        enabled: true
+      Get-members-for-upsert->Add-or-update-member-tags:
+        source_job: Get-members-for-upsert
+        target_job: Add-or-update-member-tags
+        condition_type: on_job_success
+        enabled: true

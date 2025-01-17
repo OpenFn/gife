@@ -13,8 +13,14 @@ credentials:
   efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan:
     name: GIFE - Salesforce Production - Evan
     owner: efantozzi@verasolutions.org
+  mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari:
+    name: GIFE - MailChimp - Mari
+    owner: mribeirocruz@verasolutions.org
   mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari:
     name: GIFE Production Salesforce - Mari
+    owner: mribeirocruz@verasolutions.org
+  mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari:
+    name: Mailchimp Test Environment - Mari
     owner: mribeirocruz@verasolutions.org
   mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2:
     name: Sandbox - OpenFn Mailchimp integration 2
@@ -34,81 +40,90 @@ workflows:
     jobs:
       Get-deleted-campaign-members:
         name: Get deleted campaign members
-        adaptor: '@openfn/language-salesforce@latest'
+        adaptor: '@openfn/language-salesforce@5.0.3'
         credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
         body: |
+          // // To test with manual cursor simply create a new input with lastRunTime as the manual cursor
+          // cursor($.lastRunTime || "2023-08-16T15:30:00.000Z", { key: "lastSyncTime" });
+          // cursor("now", { key: "lastRunTime", format: (c) => new Date(c).toISOString() });
           fn(state => {
             const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
             console.log(manualCursor, 'manualCursor');
-            const lastSyncTime = state.lastRunTime || manualCursor;
-            const lastRunTime = new Date().toISOString();
-            return { ...state, lastSyncTime, lastRunTime };
+            state.lastSyncTime = state.lastRunTime || manualCursor;
+            state.lastRunTime = new Date().toISOString();
+            return state
           });
+
           //Get Deleted Campaign Member Records in Salesforce since last run
           bulkQuery(
-            state => `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c
-          FROM Deleted_Campaign_Member__c
-          WHERE CreatedDate > ${state.lastSyncTime}`,
-            {},
-            state => {
-              const contactIdsList = state.data
-                .map(contact => contact['Contact__r.Id'])
-                .filter(id => id)
-                .map(id => `'${id}'`)
-                .join(', ');
-              return { ...state, contactIdsList };
-            }
-          );
+            `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`
+          ).then((state) => {
+            state.contactIdsList = state.data
+              .map((contact) => contact["Contact__r.Id"])
+              .filter((id) => id)
+              .map((id) => `'${id}'`)
+              .join(", ");
+            return state;
+          });
+
+          fnIf(!$.contactIdsList, (state) => {
+            console.log("No contact IDs found. Skipping second bulk query.");
+            return state;
+          });
+
           //Get corresponding Campaign Member details for Deleted Campaign Members
-          bulkQuery(
-            state => `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c
-          FROM CampaignMember
-          WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${state.contactIdsList})`
+          fnIf(
+            $.contactIdsList,
+            bulkQuery(
+              `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`
+            ).then(state => {
+              state.dcMembers = state.data
+              return state;
+            })
           );
 
-          fn(state => {
-            const deletedCampaignMembers = state.data;
-            console.log(deletedCampaignMembers.length, 'deletedMembersLength');
-            if (deletedCampaignMembers.length > 0) {
-              let mergeMemberTags = [];
-              for (const member of deletedCampaignMembers) {
-                const email = member["Contact.Email"];
-                const campaignName = member.Campaign_Tag_Name__c;
-                // Find the existing mapped member for this email
-                const existingMember = mergeMemberTags.find(item => item.email_address === email);
-                if (existingMember) {
-                  // If the email already exists, add the campaign name to its tags array
-                  existingMember.tags.push(campaignName);
-                } else {
-                  // If the email doesn't exist, create a new mapped member
-                  const newMember = {
-                    email_address: email,
-                    tags: [campaignName].map(str => str.replace(/\n/g, '')),
-                    email_type: "html"
-                  };
-                  mergeMemberTags.push(newMember);
-                }
-              }
-              console.log(mergeMemberTags.length, 'Retrieved mapped members');
-
-              return {
-                ...state,
-                references: [],
-                members: [
-                  ...chunk(mergeMemberTags, 500),
-                ],
-                chunkErrors: [],
-              };
-            }
-            else {
-              console.log('No contact IDs found. Skipping second bulk query.');
+          fn((state) => {
+            const dcMembers = state;
+            
+            console.log(dcMembers?.length, "Deleted Campaign Members");
+            if (!dcMembers?.length > 0) {
+              console.log(
+                "No campaing members found for contacts ids: ",
+                state.contactIdsList
+              );
               return state;
             }
-          });
+
+            let mergeMemberTags = [];
+            for (const member of dcMembers) {
+              const email = member["Contact.Email"];
+              const campaignName = member.Campaign_Tag_Name__c;
+              // Find the existing mapped member for this email
+              const existingMember = mergeMemberTags.find(
+                (item) => item.email_address === email
+              );
+              if (existingMember) {
+                // If the email already exists, add the campaign name to its tags array
+                existingMember.tags.push(campaignName);
+              } else {
+                // If the email doesn't exist, create a new mapped member
+                const newMember = {
+                  email_address: email,
+                  tags: [campaignName].map((str) => str.replace(/\n/g, "")),
+                  email_type: "html",
+                };
+                mergeMemberTags.push(newMember);
+              }
+            }
+            console.log(mergeMemberTags.length, "Retrieved mapped members");
+
+            const members = [...chunk(mergeMemberTags, 500)];
+            return { members };
+          })
       Remove-deleted-members-tags:
         name: Remove deleted members tags
         adaptor: '@openfn/language-mailchimp@latest'
-        credential: wavila@verasolutions.org-Mailchimp---Will---Test-enviroment-3
+        credential: mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari
         body: |
           //Sync contacts and create only active campaign tags
           each(
@@ -130,7 +145,7 @@ workflows:
             //     return state;
             //   }
             // )
-           post(
+            post(
               //    '/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,
               "/lists/8eec4f86ed",
               //    '/lists/a2ff510317', //will enviroment test 3
@@ -154,19 +169,20 @@ workflows:
 
           // Alert admin if response has errors
           fn((state) => {
+            const { lastSyncTime, lastRunTime } = state
             //state.chunkErrors = state.chunkErrors || [];
             // Check if response has errors
-          const chunkErrors = state.chunkErrors.flat().filter(Boolean);
+            const chunkErrors = state.chunkErrors.flat().filter(Boolean);
             if (chunkErrors.length > 0) {
               throw new Error(JSON.stringify(chunkErrors, null, 2));
             }
-            return state;
+            return { lastSyncTime, lastRunTime };
           });
 
     triggers:
       cron:
         type: cron
-        cron_expression: '*/150 * * * *'
+        cron_expression: '*/5 * * * *'
         enabled: false
     edges:
       cron->Get-deleted-campaign-members:
@@ -177,8 +193,11 @@ workflows:
       Get-deleted-campaign-members->Remove-deleted-members-tags:
         source_job: Get-deleted-campaign-members
         target_job: Remove-deleted-members-tags
-        condition_type: on_job_success
-        enabled: true
+        condition_type: js_expression
+        condition_label: has-members
+        condition_expression: |
+          state.members.length > 0 && !state.errors
+        enabled: false
   Upsert-Members:
     name: Upsert Members
     jobs:
@@ -298,7 +317,7 @@ workflows:
       Add-or-update-member-tags:
         name: Add or update member tags
         adaptor: '@openfn/language-mailchimp@latest'
-        credential: efantozzi@verasolutions.org-GIFE---MailChimp
+        credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
         body: |
           // Add or Update members to Mailchimp
           each(
@@ -317,6 +336,7 @@ workflows:
               },
               {},
               state => {
+
                 if (state.response.total_created > 0)
                   console.log(`Added ${state.response.total_created} members`);
                 if (state.response.total_updated > 0)

@@ -40,7 +40,7 @@ workflows:
     jobs:
       Get-deleted-campaign-members:
         name: Get deleted campaign members
-        adaptor: '@openfn/language-salesforce@5.0.3'
+        adaptor: '@openfn/language-salesforce@4.8.6'
         credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
         body: |
           // // To test with manual cursor simply create a new input with lastRunTime as the manual cursor
@@ -122,7 +122,7 @@ workflows:
           })
       Remove-deleted-members-tags:
         name: Remove deleted members tags
-        adaptor: '@openfn/language-mailchimp@latest'
+        adaptor: '@openfn/language-mailchimp@1.0.11'
         credential: mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari
         body: |
           //Sync contacts and create only active campaign tags
@@ -203,7 +203,7 @@ workflows:
     jobs:
       Get-members-for-upsert:
         name: Get members for upsert
-        adaptor: '@openfn/language-salesforce@latest'
+        adaptor: '@openfn/language-salesforce@4.8.6'
         credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
         body: |
           // Setup lastSyncTime
@@ -316,7 +316,7 @@ workflows:
 
       Add-or-update-member-tags:
         name: Add or update member tags
-        adaptor: '@openfn/language-mailchimp@latest'
+        adaptor: '@openfn/language-mailchimp@1.0.11'
         credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
         body: |
           // Add or Update members to Mailchimp

@@ -42,142 +42,14 @@ workflows:
         name: Get deleted campaign members
         adaptor: '@openfn/language-salesforce@4.8.6'
         credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
-        body: |
-          // // To test with manual cursor simply create a new input with lastRunTime as the manual cursor
-          // cursor($.lastRunTime || "2023-08-16T15:30:00.000Z", { key: "lastSyncTime" });
-          // cursor("now", { key: "lastRunTime", format: (c) => new Date(c).toISOString() });
-          fn(state => {
-            const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
-            console.log(manualCursor, 'manualCursor');
-            state.lastSyncTime = state.lastRunTime || manualCursor;
-            state.lastRunTime = new Date().toISOString();
-            return state
-          });
-
-          //Get Deleted Campaign Member Records in Salesforce since last run
-          bulkQuery(
-            `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`
-          ).then((state) => {
-            state.contactIdsList = state.data
-              .map((contact) => contact["Contact__r.Id"])
-              .filter((id) => id)
-              .map((id) => `'${id}'`)
-              .join(", ");
-            return state;
-          });
-
-          fnIf(!$.contactIdsList, (state) => {
-            console.log("No contact IDs found. Skipping second bulk query.");
-            return state;
-          });
-
-          //Get corresponding Campaign Member details for Deleted Campaign Members
-          fnIf(
-            $.contactIdsList,
-            bulkQuery(
-              `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`
-            ).then(state => {
-              state.dcMembers = state.data
-              return state;
-            })
-          );
-
-          fn((state) => {
-            const dcMembers = state;
-            
-            console.log(dcMembers?.length, "Deleted Campaign Members");
-            if (!dcMembers?.length > 0) {
-              console.log(
-                "No campaing members found for contacts ids: ",
-                state.contactIdsList
-              );
-              return state;
-            }
-
-            let mergeMemberTags = [];
-            for (const member of dcMembers) {
-              const email = member["Contact.Email"];
-              const campaignName = member.Campaign_Tag_Name__c;
-              // Find the existing mapped member for this email
-              const existingMember = mergeMemberTags.find(
-                (item) => item.email_address === email
-              );
-              if (existingMember) {
-                // If the email already exists, add the campaign name to its tags array
-                existingMember.tags.push(campaignName);
-              } else {
-                // If the email doesn't exist, create a new mapped member
-                const newMember = {
-                  email_address: email,
-                  tags: [campaignName].map((str) => str.replace(/\n/g, "")),
-                  email_type: "html",
-                };
-                mergeMemberTags.push(newMember);
-              }
-            }
-            console.log(mergeMemberTags.length, "Retrieved mapped members");
-
-            const members = [...chunk(mergeMemberTags, 500)];
-            return { members };
-          })
+        body: 
+          path: workflows/remove-members/fetch-deleted.js
       Remove-deleted-members-tags:
         name: Remove deleted members tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
         credential: mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari
-        body: |
-          //Sync contacts and create only active campaign tags
-          each(
-            $.members,
-            // post(
-            //   //'/lists/43fead6cd7',
-            //   '/lists/8eec4f86ed',
-            //   {
-            //     body: {
-            //       sync_tags: true,
-            //       update_existing: true,
-            //       email_type: 'html',
-            //       members: $.data,
-            //     },
-            //     headers: { 'content-type': 'application/json' },
-            //   },
-            //   state => {
-            //     state.chunkErrors.push(state.response.errors);
-            //     return state;
-            //   }
-            // )
-            post(
-              //    '/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,
-              "/lists/8eec4f86ed",
-              //    '/lists/a2ff510317', //will enviroment test 3
-              {
-                sync_tags: true,
-                update_existing: true,
-                members: $.data,
-              },
-              {},
-              (state) => {
-                //console.log(JSON.stringify(state.response.errors), 'Empty');
-                state.chunkErrors = state.chunkErrors || [];
-                state.chunkErrors.push(state.response.errors);
-                return state;
-              }
-            ).catch((error, state) => {
-              console.log(error);
-              return state;
-            })
-          );
-
-          // Alert admin if response has errors
-          fn((state) => {
-            const { lastSyncTime, lastRunTime } = state
-            //state.chunkErrors = state.chunkErrors || [];
-            // Check if response has errors
-            const chunkErrors = state.chunkErrors.flat().filter(Boolean);
-            if (chunkErrors.length > 0) {
-              throw new Error(JSON.stringify(chunkErrors, null, 2));
-            }
-            return { lastSyncTime, lastRunTime };
-          });
+        body: 
+          path: workflows/remove-members/remove-deleted.js
 
     triggers:
       cron:

@@ -42,13 +42,14 @@ workflows:
         name: Get deleted campaign members
         adaptor: '@openfn/language-salesforce@4.8.6'
         credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
-        body: 
+        body:
           path: workflows/remove-members/fetch-deleted.js
+
       Remove-deleted-members-tags:
         name: Remove deleted members tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
         credential: mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari
-        body: 
+        body:
           path: workflows/remove-members/remove-deleted.js
 
     triggers:
@@ -69,7 +70,8 @@ workflows:
         condition_label: has-members
         condition_expression: |
           state.members.length > 0 && !state.errors
-        enabled: false
+
+        enabled: true
   Upsert-Members:
     name: Upsert Members
     jobs:
@@ -77,15 +79,16 @@ workflows:
         name: Get members for upsert
         adaptor: '@openfn/language-salesforce@4.8.6'
         credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
-        body: 
+        body:
           path: workflows/upsert-members/fetch-members.js
 
       Add-or-update-member-tags:
         name: Add or update member tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
         credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
-        body: 
+        body:
           path: workflows/upsert-members/upsert-tags.js
+
     triggers:
       cron:
         type: cron

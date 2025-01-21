@@ -4,10 +4,6 @@
   "description": null,
   "inserted_at": "2024-03-19T13:09:53Z",
   "updated_at": "2025-01-21T10:41:24Z",
-  "scheduled_deletion": null,
-  "history_retention_period": 180,
-  "dataclip_retention_period": 180,
-  "retention_policy": "retain_all",
   "project_credentials": {
     "efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan": {
       "id": "7085f9d0-6bc9-403d-8e9b-cea31d66593a",
@@ -65,29 +61,24 @@
       "owner": "mribeirocruz@verasolutions.org"
     }
   },
+  "scheduled_deletion": null,
+  "history_retention_period": 180,
+  "dataclip_retention_period": 180,
+  "retention_policy": "retain_all",
   "workflows": {
     "Upsert-Members": {
       "id": "c1873753-c335-40ad-8fcc-bc3a347ca0e0",
       "name": "Upsert Members",
-      "edges": {
-        "cron->Get-members-for-upsert": {
+      "inserted_at": "2025-01-21T10:41:24.514105Z",
+      "lock_version": 32,
+      "triggers": {
+        "cron": {
           "enabled": true,
-          "id": "e8588202-23da-42b3-8ee5-b04cff8342ee",
-          "source_trigger_id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
-          "condition_type": "always",
-          "target_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7"
-        },
-        "Get-members-for-upsert->Add-or-update-member-tags": {
-          "enabled": true,
-          "id": "11ccb755-d08e-4c78-ad2e-dbea16de18eb",
-          "source_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
-          "condition_type": "on_job_success",
-          "target_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b"
+          "id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
+          "type": "cron",
+          "cron_expression": "*/150 * * * *"
         }
       },
-      "concurrency": null,
-      "inserted_at": "2024-03-19T13:09:53Z",
-      "updated_at": "2025-01-21T10:41:24Z",
       "jobs": {
         "Get-members-for-upsert": {
           "id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
@@ -104,41 +95,36 @@
           "project_credential_id": "b2f164e7-3e80-4aaf-8184-b4eb49b740e4"
         }
       },
-      "deleted_at": null,
-      "lock_version": 32,
-      "triggers": {
-        "cron": {
+      "edges": {
+        "cron->Get-members-for-upsert": {
           "enabled": true,
-          "id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
-          "type": "cron",
-          "cron_expression": "*/150 * * * *"
+          "id": "e8588202-23da-42b3-8ee5-b04cff8342ee",
+          "source_trigger_id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
+          "condition_type": "always",
+          "target_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7"
+        },
+        "Get-members-for-upsert->Add-or-update-member-tags": {
+          "enabled": true,
+          "id": "11ccb755-d08e-4c78-ad2e-dbea16de18eb",
+          "source_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
+          "condition_type": "on_job_success",
+          "target_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b"
         }
       }
     },
     "Remove-Deleted-Campaign-Members/Tags": {
       "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
       "name": "Remove Deleted Campaign Members/Tags",
-      "edges": {
-        "cron->Get-deleted-campaign-members": {
-          "enabled": true,
-          "id": "52a622f3-ab69-4453-9a42-698cc4bf0ff5",
-          "source_trigger_id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
-          "condition_type": "always",
-          "target_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f"
-        },
-        "Get-deleted-campaign-members->Remove-deleted-members-tags": {
+      "inserted_at": "2025-01-21T10:42:42.218036Z",
+      "lock_version": 147,
+      "triggers": {
+        "cron": {
           "enabled": false,
-          "id": "d0104c99-4efe-4783-9314-f10421927c65",
-          "source_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
-          "condition_expression": "state.members.length > 0 && !state.errors\n",
-          "condition_type": "js_expression",
-          "condition_label": "has-members",
-          "target_job_id": "d839d64f-78f7-4178-ab9d-482bbedd8866"
+          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
+          "type": "cron",
+          "cron_expression": "*/5 * * * *"
         }
       },
-      "concurrency": null,
-      "inserted_at": "2024-08-19T15:35:54Z",
-      "updated_at": "2025-01-21T10:41:24Z",
       "jobs": {
         "Get-deleted-campaign-members": {
           "id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
@@ -155,14 +141,22 @@
           "project_credential_id": "d3c0c70f-b20f-42f0-ad6b-8c70eeb03f65"
         }
       },
-      "deleted_at": null,
-      "lock_version": 146,
-      "triggers": {
-        "cron": {
-          "enabled": false,
-          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
-          "type": "cron",
-          "cron_expression": "*/5 * * * *"
+      "edges": {
+        "cron->Get-deleted-campaign-members": {
+          "enabled": true,
+          "id": "52a622f3-ab69-4453-9a42-698cc4bf0ff5",
+          "source_trigger_id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
+          "condition_type": "always",
+          "target_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f"
+        },
+        "Get-deleted-campaign-members->Remove-deleted-members-tags": {
+          "enabled": true,
+          "id": "d0104c99-4efe-4783-9314-f10421927c65",
+          "source_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
+          "condition_expression": "state.members.length > 0 && !state.errors\n",
+          "condition_type": "js_expression",
+          "condition_label": "has-members",
+          "target_job_id": "d839d64f-78f7-4178-ab9d-482bbedd8866"
         }
       }
     }

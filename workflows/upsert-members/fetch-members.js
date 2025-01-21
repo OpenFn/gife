@@ -37,15 +37,18 @@ fn(state => {
       merge_fields: {
         FNAME: member.FirstName,
         LNAME: member.LastName,
-        MMERGE4: member["Contact.AccountId"],
+        MMERGE4: member['Contact.AccountId'],
       },
-      tags: [member["Campaign.Nome_da_tag__c"]],
+      tags: [member['Campaign.Nome_da_tag__c']],
     };
-    if ((member["Contact.LastModifiedDate"] > state.lastSyncTime) || (member.CreatedDate > state.lastSyncTime)) {
+    if (
+      member['Contact.LastModifiedDate'] > state.lastSyncTime ||
+      member.CreatedDate > state.lastSyncTime
+    ) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {
       membersToUpdate.push(mappedMember);
- }
+    }
   }
 
   console.log(membersToCreate.length, 'membersToCreate before merge tags');

@@ -3,7 +3,11 @@
   "name": "gife-salesforce-to-mailchimp",
   "description": null,
   "inserted_at": "2024-03-19T13:09:53Z",
-  "updated_at": "2025-01-21T10:41:24Z",
+  "updated_at": "2025-01-22T07:48:38Z",
+  "scheduled_deletion": null,
+  "history_retention_period": 180,
+  "dataclip_retention_period": 180,
+  "retention_policy": "retain_all",
   "project_credentials": {
     "efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan": {
       "id": "7085f9d0-6bc9-403d-8e9b-cea31d66593a",
@@ -61,40 +65,10 @@
       "owner": "mribeirocruz@verasolutions.org"
     }
   },
-  "scheduled_deletion": null,
-  "history_retention_period": 180,
-  "dataclip_retention_period": 180,
-  "retention_policy": "retain_all",
   "workflows": {
     "Upsert-Members": {
       "id": "c1873753-c335-40ad-8fcc-bc3a347ca0e0",
       "name": "Upsert Members",
-      "inserted_at": "2025-01-21T10:41:24.514105Z",
-      "lock_version": 32,
-      "triggers": {
-        "cron": {
-          "enabled": true,
-          "id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
-          "type": "cron",
-          "cron_expression": "*/150 * * * *"
-        }
-      },
-      "jobs": {
-        "Get-members-for-upsert": {
-          "id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
-          "name": "Get members for upsert",
-          "body": "// Setup lastSyncTime\nfn(state => {\n  const manualCursor = '2024-08-10T15:30:00.000Z';\n  console.log(manualCursor, 'manualCursor');\n\n  const lastSyncTime = state.lastRunTime || manualCursor;\n  const lastRunTime = new Date().toISOString();\n  console.log('time at job start:' + lastRunTime);\n\n  return { ...state, lastSyncTime, lastRunTime };\n});\n\nbulkQuery(\n  state => `\nSELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n     Campaign.Name, Campaign.Nome_da_Tag__c\nFROM CampaignMember\nWHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n    AND Campaign.IsActive = true\n    AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})\n`\n);\n\n//Seperate members for each batch\nfn(state => {\n  const campaignMembers = state.data;\n  const membersToCreate = [];\n  const membersToUpdate = [];\n\n  console.log(campaignMembers.length, 'campaignMembers');\n\n  for (const member of campaignMembers) {\n    const mappedMember = {\n      email_address: member.Email,\n      full_name: member.Name,\n      merge_fields: {\n        FNAME: member.FirstName,\n        LNAME: member.LastName,\n        MMERGE4: member['Contact.AccountId'],\n      },\n      tags: [member['Campaign.Nome_da_tag__c']],\n    };\n    if (\n      member['Contact.LastModifiedDate'] > state.lastSyncTime ||\n      member.CreatedDate > state.lastSyncTime\n    ) {\n      membersToCreate.push({ ...mappedMember, status: 'subscribed' });\n    } else {\n      membersToUpdate.push(mappedMember);\n    }\n  }\n\n  console.log(membersToCreate.length, 'membersToCreate before merge tags');\n  console.log(membersToUpdate.length, 'membersToUpdate before merge tags');\n\n  let mergeCreateMemberTags = [];\n  let mergeUpdateMemberTags = [];\n\n  if (membersToCreate.length > 0) {\n    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n\n      return result;\n    }, []);\n  }\n\n  if (membersToUpdate.length > 0) {\n    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n      return result;\n    }, []);\n  }\n\n  console.log(\n    mergeCreateMemberTags.length,\n    'mergeCreateMemberTags after merge tags'\n  );\n\n  console.log(\n    mergeUpdateMemberTags.length,\n    'mergeUpdateMemberTags after merge tags'\n  );\n\n  return {\n    ...state,\n    references: [],\n    members: [\n      ...chunk(mergeCreateMemberTags, 500),\n      ...chunk(mergeUpdateMemberTags, 500),\n    ],\n    chunkErrors: [],\n  };\n});\n",
-          "adaptor": "@openfn/language-salesforce@4.8.6",
-          "project_credential_id": "447cb045-646a-4b01-a7d4-182bc566363a"
-        },
-        "Add-or-update-member-tags": {
-          "id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
-          "name": "Add or update member tags",
-          "body": "// Add or Update members to Mailchimp\r\neach(\r\n  '$.members[*]',\r\n  post(\r\n    '/lists/43fead6cd7',\r\n    state => {\r\n      console.log(`Upserting ${state.data.length} members...`);\r\n      return {\r\n        sync_tags: false,\r\n        update_existing: true,\r\n        email_type: 'html',\r\n        members: state.data,\r\n      };\r\n    },\r\n    {},\r\n    state => {\r\n      if (state.response.total_created > 0)\r\n        console.log(`Added ${state.response.total_created} members`);\r\n      if (state.response.total_updated > 0)\r\n        console.log(`Updated ${state.response.total_updated} members`);\r\n\r\n      if (state.response.error_count > 0)\r\n        state.chunkErrors.push(state.response.errors);\r\n      return state;\r\n    }\r\n  )\r\n);\r\n\r\n// Alert admin if response has errors\r\nfn(state => {\r\n  // Check if chunks response has errors\r\n  const chunkErrors = state.chunkErrors.flat();\r\n  if (chunkErrors.length > 0) {\r\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\r\n  }\r\n  return state;\r\n});\r\n",
-          "adaptor": "@openfn/language-mailchimp@1.0.11",
-          "project_credential_id": "b2f164e7-3e80-4aaf-8184-b4eb49b740e4"
-        }
-      },
       "edges": {
         "cron->Get-members-for-upsert": {
           "enabled": true,
@@ -110,37 +84,40 @@
           "condition_type": "on_job_success",
           "target_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b"
         }
+      },
+      "concurrency": null,
+      "inserted_at": "2024-03-19T13:09:53Z",
+      "updated_at": "2025-01-22T07:48:38Z",
+      "jobs": {
+        "Get-members-for-upsert": {
+          "id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
+          "name": "Get members for upsert",
+          "body": "// Setup lastSyncTime\nfn(state => {\n  const manualCursor = '2024-08-10T15:30:00.000Z';\n  console.log(manualCursor, 'manualCursor');\n\n  const lastSyncTime = state.lastRunTime || manualCursor;\n  const lastRunTime = new Date().toISOString();\n  console.log('time at job start:' + lastRunTime);\n\n  return { ...state, lastSyncTime, lastRunTime };\n});\n\nbulkQuery(\n  state => `\nSELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n     Campaign.Name, Campaign.Nome_da_Tag__c\nFROM CampaignMember\nWHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n    AND Campaign.IsActive = true\n    AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})\n`\n);\n\n//Seperate members for each batch\nfn(state => {\n  const campaignMembers = state.data;\n  const membersToCreate = [];\n  const membersToUpdate = [];\n\n  console.log(campaignMembers.length, 'campaignMembers');\n\n  for (const member of campaignMembers) {\n    const mappedMember = {\n      email_address: member.Email,\n      full_name: member.Name,\n      merge_fields: {\n        FNAME: member.FirstName,\n        LNAME: member.LastName,\n        MMERGE4: member['Contact.AccountId'],\n      },\n      tags: [member['Campaign.Nome_da_tag__c']],\n    };\n    if (\n      member['Contact.LastModifiedDate'] > state.lastSyncTime ||\n      member.CreatedDate > state.lastSyncTime\n    ) {\n      membersToCreate.push({ ...mappedMember, status: 'subscribed' });\n    } else {\n      membersToUpdate.push(mappedMember);\n    }\n  }\n\n  console.log(membersToCreate.length, 'membersToCreate before merge tags');\n  console.log(membersToUpdate.length, 'membersToUpdate before merge tags');\n\n  let mergeCreateMemberTags = [];\n  let mergeUpdateMemberTags = [];\n\n  if (membersToCreate.length > 0) {\n    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n\n      return result;\n    }, []);\n  }\n\n  if (membersToUpdate.length > 0) {\n    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n      return result;\n    }, []);\n  }\n\n  console.log(\n    mergeCreateMemberTags.length,\n    'mergeCreateMemberTags after merge tags'\n  );\n\n  console.log(\n    mergeUpdateMemberTags.length,\n    'mergeUpdateMemberTags after merge tags'\n  );\n\n  return {\n    ...state,\n    references: [],\n    members: [\n      ...chunk(mergeCreateMemberTags, 500),\n      ...chunk(mergeUpdateMemberTags, 500),\n    ],\n    chunkErrors: [],\n  };\n});\n",
+          "adaptor": "@openfn/language-salesforce@4.8.6",
+          "project_credential_id": "447cb045-646a-4b01-a7d4-182bc566363a"
+        },
+        "Add-or-update-member-tags": {
+          "id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
+          "name": "Add or update member tags",
+          "body": "// Add or Update members to Mailchimp\neach(\n  '$.members[*]',\n  post(\n    '/lists/43fead6cd7',\n    state => {\n      console.log(`Upserting ${state.data.length} members...`);\n      return {\n        sync_tags: false,\n        update_existing: true,\n        email_type: 'html',\n        members: state.data,\n      };\n    },\n    {},\n    state => {\n      if (state.response.total_created > 0)\n        console.log(`Added ${state.response.total_created} members`);\n      if (state.response.total_updated > 0)\n        console.log(`Updated ${state.response.total_updated} members`);\n\n      if (state.response.error_count > 0)\n        state.chunkErrors.push(state.response.errors);\n      return state;\n    }\n  )\n);\n\n// Alert admin if response has errors\nfn(state => {\n  // Check if chunks response has errors\n  const chunkErrors = state.chunkErrors.flat();\n  if (chunkErrors.length > 0) {\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\n  }\n  return state;\n});\n",
+          "adaptor": "@openfn/language-mailchimp@1.0.11",
+          "project_credential_id": "b2f164e7-3e80-4aaf-8184-b4eb49b740e4"
+        }
+      },
+      "deleted_at": null,
+      "lock_version": 33,
+      "triggers": {
+        "cron": {
+          "enabled": true,
+          "id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
+          "type": "cron",
+          "cron_expression": "*/150 * * * *"
+        }
       }
     },
     "Remove-Deleted-Campaign-Members/Tags": {
       "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
       "name": "Remove Deleted Campaign Members/Tags",
-      "inserted_at": "2025-01-21T16:00:47.730837Z",
-      "lock_version": 151,
-      "triggers": {
-        "cron": {
-          "enabled": false,
-          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
-          "type": "cron",
-          "cron_expression": "*/5 * * * *"
-        }
-      },
-      "jobs": {
-        "Get-deleted-campaign-members": {
-          "id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
-          "name": "Get deleted campaign members",
-          "body": "// To test with manual cursor simply create a new input with lastRunTime as the manual cursor\n// cursor($.lastRunTime || '2023-08-16T15:30:00.000Z', { key: 'lastSyncTime' });\n// cursor('now', { key: 'lastRunTime', format: c => new Date(c).toISOString() });\nfn(state => {\n  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp\n  state.lastSyncTime = state.lastRunTime || manualCursor;\n  state.lastRunTime = new Date().toISOString();\n  return state;\n});\n\n//Get Deleted Campaign Member Records in Salesforce since last run\nbulkQuery(\n  `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`\n).then(state => {\n  const uniqueContactsMap = new Map();\n  state.data.forEach(contact => {\n    uniqueContactsMap.set(contact['Contact__r.Id'], contact);\n  });\n\n  const uniqueContacts = Array.from(uniqueContactsMap.values());\n  state.deletedMembers = uniqueContacts;\n  state.contactIdsList = uniqueContacts\n    .map(contact => `'${contact['Contact__r.Id']}'`)\n    .join(', ');\n\n  console.log('Unique Contact IDs List:', uniqueContacts.length);\n  return state;\n});\n\nfnIf(!$.contactIdsList, state => {\n  console.log('No contact IDs found. Skipping second bulk query.');\n  return state;\n});\n\n//Get corresponding Campaign Member details for Deleted Campaign Members\nfnIf(\n  $.contactIdsList,\n  bulkQuery(\n    `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`\n  ).then(state => {\n    const campaginMembers = state.data;\n    console.log(campaginMembers.length, 'Deleted Campaign Members');\n    if (!campaginMembers.length > 0) {\n      console.log(\n        'No campaing members found for contacts ids: ',\n        state.contactIdsList\n      );\n      return state;\n    }\n\n    let mergeMemberTags = [];\n    for (const member of campaginMembers) {\n      const email = member['Contact.Email'];\n      const campaignName = member.Campaign_Tag_Name__c;\n      // Find the existing mapped member for this email\n      const existingMember = mergeMemberTags.find(\n        item => item.email_address === email\n      );\n      if (existingMember) {\n        // If the email already exists, add the campaign name to its tags array\n        existingMember.tags.push(campaignName);\n      } else {\n        // If the email doesn't exist, create a new mapped member\n        const newMember = {\n          email_address: email,\n          tags: [campaignName].map(str => str.replace(/\\n/g, '')),\n          email_type: 'html',\n        };\n        mergeMemberTags.push(newMember);\n      }\n    }\n    console.log(mergeMemberTags.length, 'Retrieved mapped members');\n\n    state.members = [...chunk(mergeMemberTags, 500)];\n    return state;\n  })\n);\n\nfnIf(!$.members && $.deletedMembers.length > 0, state => {\n  console.log('Query 2 had 0 results mapping using query 1');\n  state.members = state.deletedMembers.map(m => ({\n    email_address: m['Email__c'],\n    tags: [],\n    email_type: 'html',\n  }));\n  return state;\n});\n",
-          "adaptor": "@openfn/language-salesforce@4.8.6",
-          "project_credential_id": "becd5822-0191-4800-8a19-c7e24ff3589c"
-        },
-        "Remove-deleted-members-tags": {
-          "id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
-          "name": "Remove deleted members tags",
-          "body": "//Sync contacts and create only active campaign tags\r\n//'/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,\r\n//'/lists/a2ff510317', //will enviroment test 3\r\n//'/lists/43fead6cd7',\r\neach(\r\n  $.members,\r\n  post('/lists/8eec4f86ed', state => ({\r\n    sync_tags: true,\r\n    update_existing: true,\r\n    email_type: 'html',\r\n    members: state.data,\r\n  }))\r\n    .catch((error, state) => {\r\n      console.log(error);\r\n      return state;\r\n    })\r\n    .then(state => {\r\n      state.chunkErrors ??= [];\r\n      state.chunkErrors.push(state.response.errors);\r\n      return state;\r\n    })\r\n);\r\n\r\n// Alert admin if response has errors\r\nfn(state => {\r\n  const { lastSyncTime, lastRunTime } = state;\r\n  // Check if response has errors\r\n  const chunkErrors = state.chunkErrors.flat().filter(Boolean);\r\n  if (chunkErrors.length > 0) {\r\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\r\n  }\r\n  return { lastSyncTime, lastRunTime };\r\n});\r\n",
-          "adaptor": "@openfn/language-mailchimp@1.0.11",
-          "project_credential_id": "d3c0c70f-b20f-42f0-ad6b-8c70eeb03f65"
-        }
-      },
       "edges": {
         "cron->Get-deleted-campaign-members": {
           "enabled": true,
@@ -157,6 +134,35 @@
           "condition_type": "js_expression",
           "condition_label": "has-members",
           "target_job_id": "d839d64f-78f7-4178-ab9d-482bbedd8866"
+        }
+      },
+      "concurrency": null,
+      "inserted_at": "2024-08-19T15:35:54Z",
+      "updated_at": "2025-01-22T07:48:38Z",
+      "jobs": {
+        "Get-deleted-campaign-members": {
+          "id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
+          "name": "Get deleted campaign members",
+          "body": "// To test with manual cursor simply create a new input with lastRunTime as the manual cursor\n// cursor($.lastRunTime || '2023-08-16T15:30:00.000Z', { key: 'lastSyncTime' });\n// cursor('now', { key: 'lastRunTime', format: c => new Date(c).toISOString() });\nfn(state => {\n  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp\n  state.lastSyncTime = state.lastRunTime || manualCursor;\n  state.lastRunTime = new Date().toISOString();\n  return state;\n});\n\n//Get Deleted Campaign Member Records in Salesforce since last run\nbulkQuery(\n  `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`\n).then(state => {\n  const uniqueContactsMap = new Map();\n  state.data.forEach(contact => {\n    uniqueContactsMap.set(contact['Contact__r.Id'], contact);\n  });\n\n  const uniqueContacts = Array.from(uniqueContactsMap.values());\n  state.deletedMembers = uniqueContacts;\n  state.contactIdsList = uniqueContacts\n    .map(contact => `'${contact['Contact__r.Id']}'`)\n    .join(', ');\n\n  console.log('Unique Contact IDs List:', uniqueContacts.length);\n  return state;\n});\n\nfnIf(!$.contactIdsList, state => {\n  console.log('No contact IDs found. Skipping second bulk query.');\n  return state;\n});\n\n//Get corresponding Campaign Member details for Deleted Campaign Members\nfnIf(\n  $.contactIdsList,\n  bulkQuery(\n    `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`\n  ).then(state => {\n    const campaginMembers = state.data;\n    console.log(campaginMembers.length, 'Deleted Campaign Members');\n    if (!campaginMembers.length > 0) {\n      console.log(\n        'No campaing members found for contacts ids: ',\n        state.contactIdsList\n      );\n      return state;\n    }\n\n    let mergeMemberTags = [];\n    for (const member of campaginMembers) {\n      const email = member['Contact.Email'];\n      const campaignName = member.Campaign_Tag_Name__c;\n      // Find the existing mapped member for this email\n      const existingMember = mergeMemberTags.find(\n        item => item.email_address === email\n      );\n      if (existingMember) {\n        // If the email already exists, add the campaign name to its tags array\n        existingMember.tags.push(campaignName);\n      } else {\n        // If the email doesn't exist, create a new mapped member\n        const newMember = {\n          email_address: email,\n          tags: [campaignName].map(str => str.replace(/\\n/g, '')),\n          email_type: 'html',\n        };\n        mergeMemberTags.push(newMember);\n      }\n    }\n    console.log(mergeMemberTags.length, 'Retrieved mapped members');\n\n    state.members = [...chunk(mergeMemberTags, 500)];\n    return state;\n  })\n);\n\nfnIf(!$.members && $.deletedMembers.length > 0, state => {\n  console.log('Query 2 had 0 results mapping using query 1');\n  state.members = state.deletedMembers.map(m => ({\n    email_address: m['Email__c'],\n    tags: [],\n    email_type: 'html',\n  }));\n  return state;\n});\n",
+          "adaptor": "@openfn/language-salesforce@4.8.6",
+          "project_credential_id": "becd5822-0191-4800-8a19-c7e24ff3589c"
+        },
+        "Remove-deleted-members-tags": {
+          "id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
+          "name": "Remove deleted members tags",
+          "body": "//Sync contacts and create only active campaign tags\r\n//'/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,\r\n//'/lists/a2ff510317', //will enviroment test 3\r\n//'/lists/43fead6cd7',\r\neach(\r\n  $.members,\r\n  post('/lists/8eec4f86ed', state => {\r\n    const payload = {\r\n      sync_tags: true,\r\n      update_existing: true,\r\n      email_type: 'html',\r\n      members: state.data,\r\n    };\r\n    console.log('Sending payload to Mailchimp', payload);\r\n    return payload;\r\n  })\r\n    .catch((error, state) => {\r\n      console.log(error);\r\n      return state;\r\n    })\r\n    .then(state => {\r\n      console.log(\r\n        'Mailchimp updated_members response',\r\n        state.data.updated_members.length\r\n      );\r\n      console.log(\r\n        'Mailchimp new_members response',\r\n        state.data.new_members.length\r\n      );\r\n      state.chunkErrors ??= [];\r\n      state.chunkErrors.push(state.response.errors);\r\n      return state;\r\n    })\r\n);\r\n\r\n// Alert admin if response has errors\r\nfn(state => {\r\n  const { lastSyncTime, lastRunTime } = state;\r\n  // Check if response has errors\r\n  const chunkErrors = state.chunkErrors.flat().filter(Boolean);\r\n  if (chunkErrors.length > 0) {\r\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\r\n  }\r\n  return state;\r\n  // return { lastSyncTime, lastRunTime };\r\n});\r\n",
+          "adaptor": "@openfn/language-mailchimp@1.0.11",
+          "project_credential_id": "d3c0c70f-b20f-42f0-ad6b-8c70eeb03f65"
+        }
+      },
+      "deleted_at": null,
+      "lock_version": 152,
+      "triggers": {
+        "cron": {
+          "enabled": false,
+          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
+          "type": "cron",
+          "cron_expression": "*/5 * * * *"
         }
       }
     }

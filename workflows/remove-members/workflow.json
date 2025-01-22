@@ -10,7 +10,7 @@
                 "expression": "fetch-deleted.js",
                 "configuration": "tmp/sf-creds.json",
                 "state": {
-                    "lastRunTime": "2025-01-09T17:55:04.993Z"
+                    "lastRunTime": "2025-01-21T10:42:18.174Z"
                 },
                 "next": {
                     "remove-deleted": "!state.errors && state.members.length > 0"

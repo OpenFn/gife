@@ -2,6 +2,8 @@
 // cursor($.lastRunTime || '2023-08-16T15:30:00.000Z', { key: 'lastSyncTime' });
 // cursor('now', { key: 'lastRunTime', format: c => new Date(c).toISOString() });
 fn(state => {
+  delete state?.members
+  delete state?.references
   const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
   state.lastSyncTime = state.lastRunTime || manualCursor;
   state.lastRunTime = new Date().toISOString();
@@ -23,7 +25,7 @@ bulkQuery(
     .map(contact => `'${contact['Contact__r.Id']}'`)
     .join(', ');
 
-  console.log('Unique Contact IDs List:', uniqueContacts.length);
+  console.log('Unique Contact IDs List:', uniqueContacts?.length);
   return state;
 });
 
@@ -78,10 +80,10 @@ fnIf(
 
 fnIf(!$.members && $.deletedMembers.length > 0, state => {
   console.log('Query 2 had 0 results mapping using query 1');
-  state.members = state.deletedMembers.map(m => ({
+  state.members = [...chunk(state.deletedMembers.map(m => ({
     email_address: m['Email__c'],
     tags: [],
     email_type: 'html',
-  }));
+  })), 500)];
   return state;
 });

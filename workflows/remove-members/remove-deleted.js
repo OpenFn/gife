@@ -41,6 +41,6 @@ fn(state => {
   if (chunkErrors.length > 0) {
     throw new Error(JSON.stringify(chunkErrors, null, 2));
   }
-  return state;
-  // return { lastSyncTime, lastRunTime };
+  // return state;
+  return { lastSyncTime, lastRunTime };
 });

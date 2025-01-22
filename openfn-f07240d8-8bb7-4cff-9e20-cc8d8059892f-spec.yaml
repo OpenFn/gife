@@ -55,7 +55,7 @@ workflows:
     triggers:
       cron:
         type: cron
-        cron_expression: '*/5 * * * *'
+        cron_expression: '* * * * *'
         enabled: false
     edges:
       cron->Get-deleted-campaign-members:
@@ -69,7 +69,7 @@ workflows:
         condition_type: js_expression
         condition_label: has-members
         condition_expression: |
-          state.members.length > 0 && !state.errors
+          state?.members?.length > 0 && !state.errors
 
         enabled: true
   Upsert-Members:

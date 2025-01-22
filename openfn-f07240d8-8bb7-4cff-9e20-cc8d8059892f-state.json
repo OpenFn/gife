@@ -115,8 +115,8 @@
     "Remove-Deleted-Campaign-Members/Tags": {
       "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
       "name": "Remove Deleted Campaign Members/Tags",
-      "inserted_at": "2025-01-21T10:42:42.218036Z",
-      "lock_version": 147,
+      "inserted_at": "2025-01-21T16:00:47.730837Z",
+      "lock_version": 151,
       "triggers": {
         "cron": {
           "enabled": false,

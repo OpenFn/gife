@@ -4,17 +4,29 @@
 //'/lists/43fead6cd7',
 each(
   $.members,
-  post('/lists/8eec4f86ed', state => ({
-    sync_tags: true,
-    update_existing: true,
-    email_type: 'html',
-    members: state.data,
-  }))
+  post('/lists/8eec4f86ed', state => {
+    const payload = {
+      sync_tags: true,
+      update_existing: true,
+      email_type: 'html',
+      members: state.data,
+    };
+    console.log('Sending payload to Mailchimp', payload);
+    return payload;
+  })
     .catch((error, state) => {
       console.log(error);
       return state;
     })
     .then(state => {
+      console.log(
+        'Mailchimp updated_members response',
+        state.data.updated_members.length
+      );
+      console.log(
+        'Mailchimp new_members response',
+        state.data.new_members.length
+      );
       state.chunkErrors ??= [];
       state.chunkErrors.push(state.response.errors);
       return state;
@@ -29,5 +41,6 @@ fn(state => {
   if (chunkErrors.length > 0) {
     throw new Error(JSON.stringify(chunkErrors, null, 2));
   }
-  return { lastSyncTime, lastRunTime };
+  return state;
+  // return { lastSyncTime, lastRunTime };
 });

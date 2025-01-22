@@ -35,7 +35,7 @@ credentials:
     name: Mailchimp HTTP - test credential
     owner: wavila@verasolutions.org
 workflows:
-  'Remove-Deleted-Campaign-Members/Tags':
+  "Remove-Deleted-Campaign-Members/Tags":
     name: 'Remove Deleted Campaign Members/Tags'
     jobs:
       Get-deleted-campaign-members:

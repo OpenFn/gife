@@ -40,7 +40,16 @@ fnIf(
   bulkQuery(
     `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`
   ).then(state => {
-    const campaginMembers = state.data;
+    const deletedMembers = state.deletedMembers.map(i => ({
+      "Campaign_Tag_Name__c": "",
+      "Contact.Email": i["Email__c"],
+      "Contact.Id": i["Contact__r.Id"],
+      "Contact.Name": i["Contact__r.Name"]
+
+    }))
+    const campaginMembers = [...state.data, ...deletedMembers];
+    
+
     console.log(campaginMembers.length, 'Deleted Campaign Members');
     if (!campaginMembers.length > 0) {
       console.log(
@@ -59,13 +68,16 @@ fnIf(
         item => item.email_address === email
       );
       if (existingMember) {
+        console.log('Existing member found', { campaignName });
         // If the email already exists, add the campaign name to its tags array
-        existingMember.tags.push(campaignName);
+        campaignName && existingMember.tags.push(campaignName);
       } else {
         // If the email doesn't exist, create a new mapped member
         const newMember = {
           email_address: email,
-          tags: [campaignName].map(str => str.replace(/\n/g, '')),
+          tags: campaignName
+            ? [campaignName].map(str => str.replace(/\n/g, ''))
+            : [],
           email_type: 'html',
         };
         mergeMemberTags.push(newMember);

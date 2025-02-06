@@ -115,14 +115,14 @@
     "Remove-Deleted-Campaign-Members/Tags": {
       "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
       "name": "Remove Deleted Campaign Members/Tags",
-      "inserted_at": "2025-01-22T16:40:36.645417Z",
-      "lock_version": 173,
+      "inserted_at": "2025-02-04T13:15:40.333004Z",
+      "lock_version": 216,
       "triggers": {
         "cron": {
           "enabled": false,
           "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
           "type": "cron",
-          "cron_expression": "* * * * *"
+          "cron_expression": "*/1 * * * *"
         }
       },
       "jobs": {
@@ -161,5 +161,6 @@
       }
     }
   },
-  "requires_mfa": false
+  "requires_mfa": false,
+  "collections": {}
 }

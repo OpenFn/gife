@@ -55,7 +55,7 @@ workflows:
     triggers:
       cron:
         type: cron
-        cron_expression: '* * * * *'
+        cron_expression: '*/1 * * * *'
         enabled: false
     edges:
       cron->Get-deleted-campaign-members:

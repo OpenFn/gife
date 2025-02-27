@@ -5,9 +5,6 @@
   "inserted_at": "2024-03-19T13:09:53Z",
   "updated_at": "2025-02-27T14:39:16Z",
   "scheduled_deletion": null,
-  "history_retention_period": 180,
-  "dataclip_retention_period": 180,
-  "retention_policy": "retain_all",
   "project_credentials": {
     "efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan": {
       "id": "7085f9d0-6bc9-403d-8e9b-cea31d66593a",
@@ -65,6 +62,9 @@
       "owner": "mribeirocruz@verasolutions.org"
     }
   },
+  "history_retention_period": 180,
+  "dataclip_retention_period": 180,
+  "retention_policy": "retain_all",
   "collections": {},
   "workflows": {
     "Upsert-Members": {

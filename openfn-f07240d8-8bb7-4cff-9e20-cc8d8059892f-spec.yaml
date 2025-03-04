@@ -1,5 +1,6 @@
 name: gife-salesforce-to-mailchimp
 description: null
+collections: null
 credentials:
   eassis@verasolutions.org-GIFE-Production-Salesforce---Emilie:
     name: GIFE Production Salesforce - Emilie

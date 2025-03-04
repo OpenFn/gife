@@ -1,13 +1,23 @@
-// Setup lastSyncTime
+//  fn(state => {
+//   //INPUT manualCursor date below if you want to 
+//   //... query data from a specific date e.g., 2024-08-10T15:30:00.000Z
+//   const manualCursor = ''; //'2024-08-10T15:30:00.000Z'
+//   return { ...state, manualCursor}; 
+//  }); 
+
+// cursor(state?.manualCursor || '1 hour ago', {
+//   format: c => dateFns.formatISO(new Date(c)),
+// });
+//==NOTE: Old cursor implementation not working as of March '25 ===
 fn(state => {
-  const manualCursor = '2024-08-10T15:30:00.000Z';
+  const manualCursor = '2025-03-01T15:30:00.000Z';
   console.log(manualCursor, 'manualCursor');
 
-  const lastSyncTime = state.lastRunTime || manualCursor;
+  const cursor = state.lastRunTime || manualCursor;
   const lastRunTime = new Date().toISOString();
   console.log('time at job start:' + lastRunTime);
 
-  return { ...state, lastSyncTime, lastRunTime };
+  return { ...state, cursor, lastRunTime };
 });
 
 bulkQuery(
@@ -18,12 +28,13 @@ SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
 FROM CampaignMember
 WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
     AND Campaign.IsActive = true
-    AND (Contact.LastModifiedDate > ${state.lastSyncTime} OR CreatedDate > ${state.lastSyncTime})
+    AND (Contact.LastModifiedDate > ${state.cursor} OR CreatedDate > ${state.cursor})
 `
 );
 
 //Seperate members for each batch
 fn(state => {
+  const lastRunTime = state; 
   const campaignMembers = state.data;
   const membersToCreate = [];
   const membersToUpdate = [];
@@ -42,8 +53,8 @@ fn(state => {
       tags: [member['Campaign.Nome_da_tag__c']],
     };
     if (
-      member['Contact.LastModifiedDate'] > state.lastSyncTime ||
-      member.CreatedDate > state.lastSyncTime
+      member['Contact.LastModifiedDate'] > state.cursor ||
+      member.CreatedDate > state.cursor
     ) {
       membersToCreate.push({ ...mappedMember, status: 'subscribed' });
     } else {

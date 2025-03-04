@@ -1,13 +1,3 @@
-//  fn(state => {
-//   //INPUT manualCursor date below if you want to 
-//   //... query data from a specific date e.g., 2024-08-10T15:30:00.000Z
-//   const manualCursor = ''; //'2024-08-10T15:30:00.000Z'
-//   return { ...state, manualCursor}; 
-//  }); 
-
-// cursor(state?.manualCursor || '1 hour ago', {
-//   format: c => dateFns.formatISO(new Date(c)),
-// });
 //==NOTE: Old cursor implementation not working as of March '25 ===
 fn(state => {
   const manualCursor = '2025-03-01T15:30:00.000Z';

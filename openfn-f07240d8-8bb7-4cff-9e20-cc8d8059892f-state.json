@@ -5,6 +5,7 @@
   "concurrency": null,
   "inserted_at": "2024-03-19T13:09:53Z",
   "updated_at": "2025-02-27T14:39:16Z",
+  "scheduled_deletion": null,
   "project_credentials": {
     "efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan": {
       "id": "7085f9d0-6bc9-403d-8e9b-cea31d66593a",
@@ -62,60 +63,11 @@
       "owner": "mribeirocruz@verasolutions.org"
     }
   },
-  "scheduled_deletion": null,
   "history_retention_period": 180,
   "dataclip_retention_period": 180,
   "retention_policy": "retain_all",
   "collections": {},
   "workflows": {
-    "Remove-Deleted-Campaign-Members/Tags": {
-      "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
-      "name": "Remove Deleted Campaign Members/Tags",
-      "inserted_at": "2025-02-27T14:39:16.640072Z",
-      "lock_version": 243,
-      "triggers": {
-        "cron": {
-          "enabled": false,
-          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
-          "type": "cron",
-          "cron_expression": "*/1 * * * *"
-        }
-      },
-      "jobs": {
-        "Get-deleted-campaign-members": {
-          "id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
-          "name": "Get deleted campaign members",
-          "body": "// To test with manual cursor simply create a new input with lastRunTime as the manual cursor\n// cursor($.lastRunTime || '2023-08-16T15:30:00.000Z', { key: 'lastSyncTime' });\n// cursor('now', { key: 'lastRunTime', format: c => new Date(c).toISOString() });\nfn(state => {\n  delete state?.members\n  delete state?.references\n  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp\n  state.lastSyncTime = state.lastRunTime || manualCursor;\n  state.lastRunTime = new Date().toISOString();\n  return state;\n});\n\n//Get Deleted Campaign Member Records in Salesforce since last run\nbulkQuery(\n  `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`\n).then(state => {\n  const uniqueContactsMap = new Map();\n  state.data.forEach(contact => {\n    uniqueContactsMap.set(contact['Contact__r.Id'], contact);\n  });\n\n  const uniqueContacts = Array.from(uniqueContactsMap.values());\n  state.deletedMembers = uniqueContacts;\n  state.contactIdsList = uniqueContacts\n    .map(contact => `'${contact['Contact__r.Id']}'`)\n    .join(', ');\n\n  console.log('Unique Contact IDs List:', uniqueContacts?.length);\n  return state;\n});\n\nfnIf(!$.contactIdsList, state => {\n  console.log('No contact IDs found. Skipping second bulk query.');\n  return state;\n});\n\n//Get corresponding Campaign Member details for Deleted Campaign Members\nfnIf(\n  $.contactIdsList,\n  bulkQuery(\n    `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`\n  ).then(state => {\n    const deletedMembers = state.deletedMembers.map(i => ({\n      \"Campaign_Tag_Name__c\": \"\",\n      \"Contact.Email\": i[\"Email__c\"],\n      \"Contact.Id\": i[\"Contact__r.Id\"],\n      \"Contact.Name\": i[\"Contact__r.Name\"]\n\n    }))\n    const campaginMembers = [...state.data, ...deletedMembers];\n    \n\n    console.log(campaginMembers.length, 'Deleted Campaign Members');\n    if (!campaginMembers.length > 0) {\n      console.log(\n        'No campaing members found for contacts ids: ',\n        state.contactIdsList\n      );\n      return state;\n    }\n\n    let mergeMemberTags = [];\n    for (const member of campaginMembers) {\n      const email = member['Contact.Email'];\n      const campaignName = member.Campaign_Tag_Name__c;\n      // Find the existing mapped member for this email\n      const existingMember = mergeMemberTags.find(\n        item => item.email_address === email\n      );\n      if (existingMember) {\n        console.log('Existing member found', { campaignName });\n        // If the email already exists, add the campaign name to its tags array\n        campaignName && existingMember.tags.push(campaignName);\n      } else {\n        // If the email doesn't exist, create a new mapped member\n        const newMember = {\n          email_address: email,\n          tags: campaignName\n            ? [campaignName].map(str => str.replace(/\\n/g, ''))\n            : [],\n          email_type: 'html',\n        };\n        mergeMemberTags.push(newMember);\n      }\n    }\n    console.log(mergeMemberTags.length, 'Retrieved mapped members');\n\n    state.members = [...chunk(mergeMemberTags, 500)];\n    return state;\n  })\n);\n\nfnIf(!$.members && $.deletedMembers.length > 0, state => {\n  console.log('Query 2 had 0 results mapping using query 1');\n  state.members = [...chunk(state.deletedMembers.map(m => ({\n    email_address: m['Email__c'],\n    tags: [],\n    email_type: 'html',\n  })), 500)];\n  return state;\n});\n",
-          "adaptor": "@openfn/language-salesforce@4.8.6",
-          "project_credential_id": "becd5822-0191-4800-8a19-c7e24ff3589c"
-        },
-        "Remove-deleted-members-tags": {
-          "id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
-          "name": "Remove deleted members tags",
-          "body": "//Sync contacts and create only active campaign tags\n//'/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,\n//'/lists/a2ff510317', //will enviroment test 3\n//'/lists/43fead6cd7',\neach(\n  $.members,\n  post('/lists/8eec4f86ed', state => {\n    const payload = {\n      sync_tags: true,\n      update_existing: true,\n      email_type: 'html',\n      members: state.data,\n    };\n    console.log('Sending payload to Mailchimp', payload);\n    return payload;\n  })\n    .catch((error, state) => {\n      console.log(error);\n      return state;\n    })\n    .then(state => {\n      console.log(\n        'Mailchimp updated_members response',\n        state.data.updated_members.length\n      );\n      console.log(\n        'Mailchimp new_members response',\n        state.data.new_members.length\n      );\n      state.chunkErrors ??= [];\n      state.chunkErrors.push(state.response.errors);\n      return state;\n    })\n);\n\n// Alert admin if response has errors\nfn(state => {\n  const { lastSyncTime, lastRunTime } = state;\n  // Check if response has errors\n  const chunkErrors = state.chunkErrors.flat().filter(Boolean);\n  if (chunkErrors.length > 0) {\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\n  }\n  // return state;\n  return { lastSyncTime, lastRunTime };\n});\n",
-          "adaptor": "@openfn/language-mailchimp@1.0.11",
-          "project_credential_id": "d3c0c70f-b20f-42f0-ad6b-8c70eeb03f65"
-        }
-      },
-      "edges": {
-        "cron->Get-deleted-campaign-members": {
-          "enabled": true,
-          "id": "52a622f3-ab69-4453-9a42-698cc4bf0ff5",
-          "target_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
-          "source_trigger_id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
-          "condition_type": "always"
-        },
-        "Get-deleted-campaign-members->Remove-deleted-members-tags": {
-          "enabled": true,
-          "id": "d0104c99-4efe-4783-9314-f10421927c65",
-          "target_job_id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
-          "source_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
-          "condition_type": "js_expression",
-          "condition_label": "has-members",
-          "condition_expression": "state?.members?.length > 0 && !state.errors\n"
-        }
-      }
-    },
     "Upsert-Members": {
       "id": "c1873753-c335-40ad-8fcc-bc3a347ca0e0",
       "name": "Upsert Members",
@@ -159,6 +111,54 @@
           "target_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
           "source_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
           "condition_type": "on_job_success"
+        }
+      }
+    },
+    "Remove-Deleted-Campaign-Members/Tags": {
+      "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
+      "name": "Remove Deleted Campaign Members/Tags",
+      "inserted_at": "2025-03-04T23:14:56.036221Z",
+      "lock_version": 246,
+      "triggers": {
+        "cron": {
+          "enabled": true,
+          "id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
+          "type": "cron",
+          "cron_expression": "*/150 * * * *"
+        }
+      },
+      "jobs": {
+        "Get-deleted-campaign-members": {
+          "id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
+          "name": "Get deleted campaign members",
+          "body": "// To test with manual cursor simply create a new input with lastRunTime as the manual cursor\n// cursor($.lastRunTime || '2023-08-16T15:30:00.000Z', { key: 'lastSyncTime' });\n// cursor('now', { key: 'lastRunTime', format: c => new Date(c).toISOString() });\nfn(state => {\n  delete state?.members\n  delete state?.references\n  const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp\n  state.lastSyncTime = state.lastRunTime || manualCursor;\n  state.lastRunTime = new Date().toISOString();\n  return state;\n});\n\n//Get Deleted Campaign Member Records in Salesforce since last run\nbulkQuery(\n  `SELECT Contact__r.Id, Contact__r.Name, Email__c, Nome_da_Tag__c FROM Deleted_Campaign_Member__c WHERE CreatedDate > ${$.lastSyncTime}`\n).then(state => {\n  const uniqueContactsMap = new Map();\n  state.data.forEach(contact => {\n    uniqueContactsMap.set(contact['Contact__r.Id'], contact);\n  });\n\n  const uniqueContacts = Array.from(uniqueContactsMap.values());\n  state.deletedMembers = uniqueContacts;\n  state.contactIdsList = uniqueContacts\n    .map(contact => `'${contact['Contact__r.Id']}'`)\n    .join(', ');\n\n  console.log('Unique Contact IDs List:', uniqueContacts?.length);\n  return state;\n});\n\nfnIf(!$.contactIdsList, state => {\n  console.log('No contact IDs found. Skipping second bulk query.');\n  return state;\n});\n\n//Get corresponding Campaign Member details for Deleted Campaign Members\nfnIf(\n  $.contactIdsList,\n  bulkQuery(\n    `SELECT Contact.Id, Contact.Name, Contact.Email, Campaign_Tag_Name__c FROM CampaignMember WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas' AND Campaign.IsActive = true AND Contact.Id IN (${$.contactIdsList})`\n  ).then(state => {\n    const deletedMembers = state.deletedMembers.map(i => ({\n      \"Campaign_Tag_Name__c\": \"\",\n      \"Contact.Email\": i[\"Email__c\"],\n      \"Contact.Id\": i[\"Contact__r.Id\"],\n      \"Contact.Name\": i[\"Contact__r.Name\"]\n\n    }))\n    const campaginMembers = [...state.data, ...deletedMembers];\n    \n\n    console.log(campaginMembers.length, 'Deleted Campaign Members');\n    if (!campaginMembers.length > 0) {\n      console.log(\n        'No campaing members found for contacts ids: ',\n        state.contactIdsList\n      );\n      return state;\n    }\n\n    let mergeMemberTags = [];\n    for (const member of campaginMembers) {\n      const email = member['Contact.Email'];\n      const campaignName = member.Campaign_Tag_Name__c;\n      // Find the existing mapped member for this email\n      const existingMember = mergeMemberTags.find(\n        item => item.email_address === email\n      );\n      if (existingMember) {\n        console.log('Existing member found', { campaignName });\n        // If the email already exists, add the campaign name to its tags array\n        campaignName && existingMember.tags.push(campaignName);\n      } else {\n        // If the email doesn't exist, create a new mapped member\n        const newMember = {\n          email_address: email,\n          tags: campaignName\n            ? [campaignName].map(str => str.replace(/\\n/g, ''))\n            : [],\n          email_type: 'html',\n        };\n        mergeMemberTags.push(newMember);\n      }\n    }\n    console.log(mergeMemberTags.length, 'Retrieved mapped members');\n\n    state.members = [...chunk(mergeMemberTags, 500)];\n    return state;\n  })\n);\n\nfnIf(!$.members && $.deletedMembers.length > 0, state => {\n  console.log('Query 2 had 0 results mapping using query 1');\n  state.members = [...chunk(state.deletedMembers.map(m => ({\n    email_address: m['Email__c'],\n    tags: [],\n    email_type: 'html',\n  })), 500)];\n  return state;\n});\n",
+          "adaptor": "@openfn/language-salesforce@4.8.6",
+          "project_credential_id": "447cb045-646a-4b01-a7d4-182bc566363a"
+        },
+        "Remove-deleted-members-tags": {
+          "id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
+          "name": "Remove deleted members tags",
+          "body": "//Sync contacts and create only active campaign tags\n//'/lists/25299978a7 Mailchimp Shreya's Test' 8eec4f86ed Will's Mailchimp Test,\n//'/lists/a2ff510317', //will enviroment test 3\n//'/lists/43fead6cd7',\neach(\n  $.members,\n  post('/lists/43fead6cd7', state => {\n    const payload = {\n      sync_tags: true,\n      update_existing: true,\n      email_type: 'html',\n      members: state.data,\n    };\n    console.log('Sending payload to Mailchimp', payload);\n    return payload;\n  })\n    .catch((error, state) => {\n      console.log(error);\n      return state;\n    })\n    .then(state => {\n      console.log(\n        'Mailchimp updated_members response',\n        state.data.updated_members.length\n      );\n      console.log(\n        'Mailchimp new_members response',\n        state.data.new_members.length\n      );\n      state.chunkErrors ??= [];\n      state.chunkErrors.push(state.response.errors);\n      return state;\n    })\n);\n\n// Alert admin if response has errors\nfn(state => {\n  const { lastSyncTime, lastRunTime } = state;\n  // Check if response has errors\n  const chunkErrors = state.chunkErrors.flat().filter(Boolean);\n  if (chunkErrors.length > 0) {\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\n  }\n  // return state;\n  return { lastSyncTime, lastRunTime };\n});\n",
+          "adaptor": "@openfn/language-mailchimp@1.0.11",
+          "project_credential_id": "b2f164e7-3e80-4aaf-8184-b4eb49b740e4"
+        }
+      },
+      "edges": {
+        "cron->Get-deleted-campaign-members": {
+          "enabled": true,
+          "id": "52a622f3-ab69-4453-9a42-698cc4bf0ff5",
+          "target_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
+          "source_trigger_id": "cf67b9c5-e2e0-4ca1-8aca-8e7f32c79d98",
+          "condition_type": "always"
+        },
+        "Get-deleted-campaign-members->Remove-deleted-members-tags": {
+          "enabled": true,
+          "id": "d0104c99-4efe-4783-9314-f10421927c65",
+          "target_job_id": "d839d64f-78f7-4178-ab9d-482bbedd8866",
+          "source_job_id": "de821b2b-f7f8-4cc3-ad8f-c746c8698b0f",
+          "condition_type": "js_expression",
+          "condition_label": "has-members",
+          "condition_expression": "state?.members?.length > 0 && !state.errors\n"
         }
       }
     }

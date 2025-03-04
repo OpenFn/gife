@@ -42,22 +42,22 @@ workflows:
       Get-deleted-campaign-members:
         name: Get deleted campaign members
         adaptor: '@openfn/language-salesforce@4.8.6'
-        credential: mribeirocruz@verasolutions.org-Sandbox---OpenFn-Mailchimp-integration-2
+        credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
         body:
           path: workflows/remove-members/fetch-deleted.js
 
       Remove-deleted-members-tags:
         name: Remove deleted members tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
-        credential: mribeirocruz@verasolutions.org-Mailchimp-Test-Environment---Mari
+        credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
         body:
           path: workflows/remove-members/remove-deleted.js
 
     triggers:
       cron:
         type: cron
-        cron_expression: '*/1 * * * *'
-        enabled: false
+        cron_expression: '*/150 * * * *'
+        enabled: true
     edges:
       cron->Get-deleted-campaign-members:
         source_trigger: cron

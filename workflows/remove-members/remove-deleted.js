@@ -4,7 +4,7 @@
 //'/lists/43fead6cd7',
 each(
   $.members,
-  post('/lists/8eec4f86ed', state => {
+  post('/lists/43fead6cd7', state => {
     const payload = {
       sync_tags: true,
       update_existing: true,

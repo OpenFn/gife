@@ -7,6 +7,7 @@ fn(state => {
   const manualCursor = '2023-08-16T15:30:00.000Z'; // SF timestamp
   state.lastSyncTime = state.lastRunTime || manualCursor;
   state.lastRunTime = new Date().toISOString();
+  console.log('Cursor date to use in SF queries:: ', state.lastSyncTime); 
   return state;
 });
 

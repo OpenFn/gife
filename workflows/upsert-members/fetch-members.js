@@ -1,11 +1,11 @@
-//==NOTE: Old cursor implementation not working as of March '25 ===
 fn(state => {
   const manualCursor = '2025-03-01T15:30:00.000Z';
-  console.log(manualCursor, 'manualCursor');
+  //console.log(manualCursor, 'manualCursor');
 
   const cursor = state.lastRunTime || manualCursor;
   const lastRunTime = new Date().toISOString();
-  console.log('time at job start:' + lastRunTime);
+  console.log('time at job start:: ', lastRunTime);
+  console.log('Cursor date to use in queries:: ', cursor);
 
   return { ...state, cursor, lastRunTime };
 });

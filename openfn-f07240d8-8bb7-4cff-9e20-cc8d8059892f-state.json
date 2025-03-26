@@ -5,6 +5,7 @@
   "concurrency": null,
   "inserted_at": "2024-03-19T13:09:53Z",
   "updated_at": "2025-02-27T14:39:16Z",
+  "scheduled_deletion": null,
   "project_credentials": {
     "efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan": {
       "id": "7085f9d0-6bc9-403d-8e9b-cea31d66593a",
@@ -67,11 +68,11 @@
       "owner": "mribeirocruz@verasolutions.org"
     }
   },
-  "scheduled_deletion": null,
   "history_retention_period": 180,
   "dataclip_retention_period": 180,
   "retention_policy": "retain_all",
   "collections": {},
+  "requires_mfa": false,
   "workflows": {
     "Remove-Deleted-Campaign-Members/Tags": {
       "id": "273e2c2a-a97d-49eb-bebb-2dad0666a716",
@@ -167,6 +168,5 @@
         }
       }
     }
-  },
-  "requires_mfa": false
+  }
 }

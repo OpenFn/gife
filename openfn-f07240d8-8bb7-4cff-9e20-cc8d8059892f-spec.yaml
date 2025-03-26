@@ -17,6 +17,9 @@ credentials:
   mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari:
     name: GIFE - MailChimp - Mari
     owner: mribeirocruz@verasolutions.org
+  mribeirocruz@verasolutions.org-GIFE-Production---OpenFN-Integration-User:
+    name: GIFE Production - OpenFN Integration User
+    owner: mribeirocruz@verasolutions.org
   mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari:
     name: GIFE Production Salesforce - Mari
     owner: mribeirocruz@verasolutions.org
@@ -42,7 +45,7 @@ workflows:
       Get-deleted-campaign-members:
         name: Get deleted campaign members
         adaptor: '@openfn/language-salesforce@4.8.6'
-        credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
+        credential: mribeirocruz@verasolutions.org-GIFE-Production---OpenFN-Integration-User
         body:
           path: workflows/remove-members/fetch-deleted.js
 
@@ -57,7 +60,7 @@ workflows:
       cron:
         type: cron
         cron_expression: '*/150 * * * *'
-        enabled: true
+        enabled: false
     edges:
       cron->Get-deleted-campaign-members:
         source_trigger: cron
@@ -79,7 +82,7 @@ workflows:
       Get-members-for-upsert:
         name: Get members for upsert
         adaptor: '@openfn/language-salesforce@4.8.6'
-        credential: mribeirocruz@verasolutions.org-GIFE-Production-Salesforce---Mari
+        credential: mribeirocruz@verasolutions.org-GIFE-Production---OpenFN-Integration-User
         body:
           path: workflows/upsert-members/fetch-members.js
 
@@ -94,7 +97,7 @@ workflows:
       cron:
         type: cron
         cron_expression: '*/150 * * * *'
-        enabled: true
+        enabled: false
     edges:
       cron->Get-members-for-upsert:
         source_trigger: cron

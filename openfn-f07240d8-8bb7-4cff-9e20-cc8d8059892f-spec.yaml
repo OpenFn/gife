@@ -88,7 +88,7 @@ workflows:
     triggers:
       cron:
         type: cron
-        cron_expression: '*/5 * * * *'
+        cron_expression: '*/150 * * * *'
         cron_cursor_job: Add-or-update-member-tags
         enabled: true
     edges:

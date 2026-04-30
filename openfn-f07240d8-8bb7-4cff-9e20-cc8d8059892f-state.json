@@ -113,14 +113,14 @@
     "Upsert-Members": {
       "id": "c1873753-c335-40ad-8fcc-bc3a347ca0e0",
       "name": "Upsert Members",
-      "inserted_at": "2026-04-30T14:31:39.036606Z",
-      "lock_version": 62,
+      "inserted_at": "2026-04-30T14:34:55.435910Z",
+      "lock_version": 63,
       "triggers": {
         "cron": {
           "enabled": true,
           "id": "b22a60d5-7c93-4ebd-805b-772b9f738e76",
           "type": "cron",
-          "cron_expression": "*/5 * * * *",
+          "cron_expression": "*/150 * * * *",
           "cron_cursor_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b"
         }
       },

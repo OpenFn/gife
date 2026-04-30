@@ -24,7 +24,6 @@ WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
 
 //Seperate members for each batch
 fn(state => {
-  const lastRunTime = state; 
   const campaignMembers = state.data;
   const membersToCreate = [];
   const membersToUpdate = [];
@@ -100,8 +99,7 @@ fn(state => {
   );
 
   return {
-    ...state,
-    references: [],
+    lastRunTime: state.lastRunTime,
     members: [
       ...chunk(mergeCreateMemberTags, 500),
       ...chunk(mergeUpdateMemberTags, 500),

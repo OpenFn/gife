@@ -2,21 +2,12 @@ name: gife-salesforce-to-mailchimp
 description: null
 collections: null
 credentials:
+  eassis@verasolutions.org-GIFE---MailChimp---Mari:
+    name: GIFE - MailChimp - Mari
+    owner: eassis@verasolutions.org
   eassis@verasolutions.org-GIFE-Production-Salesforce---Emilie:
     name: GIFE Production Salesforce - Emilie
     owner: eassis@verasolutions.org
-  efantozzi@verasolutions.org-GIFE---MailChimp:
-    name: GIFE - MailChimp
-    owner: efantozzi@verasolutions.org
-  efantozzi@verasolutions.org-GIFE---MailChimp-Teste:
-    name: GIFE - MailChimp Teste
-    owner: efantozzi@verasolutions.org
-  efantozzi@verasolutions.org-GIFE---Salesforce-Production---Evan:
-    name: GIFE - Salesforce Production - Evan
-    owner: efantozzi@verasolutions.org
-  mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari:
-    name: GIFE - MailChimp - Mari
-    owner: mribeirocruz@verasolutions.org
   mribeirocruz@verasolutions.org-GIFE-Production---OpenFN-Integration-User:
     name: GIFE Production - OpenFN Integration User
     owner: mribeirocruz@verasolutions.org
@@ -52,7 +43,7 @@ workflows:
       Remove-deleted-members-tags:
         name: Remove deleted members tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
-        credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
+        credential: eassis@verasolutions.org-GIFE---MailChimp---Mari
         body:
           path: workflows/remove-members/remove-deleted.js
 
@@ -60,7 +51,8 @@ workflows:
       cron:
         type: cron
         cron_expression: '*/150 * * * *'
-        enabled: false
+        cron_cursor_job: Get-deleted-campaign-members
+        enabled: true
     edges:
       cron->Get-deleted-campaign-members:
         source_trigger: cron
@@ -89,7 +81,7 @@ workflows:
       Add-or-update-member-tags:
         name: Add or update member tags
         adaptor: '@openfn/language-mailchimp@1.0.11'
-        credential: mribeirocruz@verasolutions.org-GIFE---MailChimp---Mari
+        credential: eassis@verasolutions.org-GIFE---MailChimp---Mari
         body:
           path: workflows/upsert-members/upsert-tags.js
 
@@ -97,7 +89,8 @@ workflows:
       cron:
         type: cron
         cron_expression: '*/150 * * * *'
-        enabled: false
+        cron_cursor_job: Get-members-for-upsert
+        enabled: true
     edges:
       cron->Get-members-for-upsert:
         source_trigger: cron

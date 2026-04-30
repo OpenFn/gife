@@ -33,5 +33,6 @@ fn(state => {
   if (chunkErrors.length > 0) {
     throw new Error(JSON.stringify(chunkErrors, null, 2));
   }
-  return state;
+  // Advance the cursor only on full success
+  return { lastRunTime: state.lastRunTime };
 });

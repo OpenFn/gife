@@ -14,13 +14,13 @@ each(
     },
     {},
     state => {
-      if (state.response.total_created > 0)
-        console.log(`Added ${state.response.total_created} members`);
-      if (state.response.total_updated > 0)
-        console.log(`Updated ${state.response.total_updated} members`);
+      if (state.response.body.total_created > 0)
+        console.log(`Added ${state.response.body.total_created} members`);
+      if (state.response.body.total_updated > 0)
+        console.log(`Updated ${state.response.body.total_updated} members`);
 
-      if (state.response.error_count > 0)
-        state.chunkErrors.push(state.response.errors);
+      if (state.response.body.error_count > 0)
+        state.chunkErrors.push(state.response.body.errors);
       return state;
     }
   )
@@ -30,9 +30,9 @@ each(
 fn(state => {
   // Check if chunks response has errors
   const chunkErrors = state.chunkErrors.flat();
-  if (chunkErrors.length > 0) {
-    throw new Error(JSON.stringify(chunkErrors, null, 2));
-  }
+  // if (chunkErrors.length > 0) {
+  //   throw new Error(JSON.stringify(chunkErrors, null, 2));
+  // }
   // Advance the cursor only on full success
-  return { lastRunTime: state.lastRunTime };
+  return { lastRunTime: state.lastRunTime, data: state.data };
 });

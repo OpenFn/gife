@@ -30,6 +30,48 @@ credentials:
     name: Mailchimp HTTP - test credential
     owner: wavila@verasolutions.org
 workflows:
+  Event-based-workflow:
+    name: Event-based workflow
+    jobs:
+      Transform-data:
+        name: Transform data
+        adaptor: '@openfn/language-salesforce@4.8.6'
+        credential: mribeirocruz@verasolutions.org-GIFE-Production---OpenFN-Integration-User
+        body: |
+          // Validate and transform the data you've received...
+          // query(`
+          // SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
+          //      Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
+          //      Campaign.Name, Campaign.Nome_da_Tag__c
+          // FROM CampaignMember
+          // WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
+          //     AND Campaign.IsActive = true
+          //     AND Email= 'natalia@gife.org.br'
+          //     AND (Contact.LastModifiedDate > 2026-03-23T17:01:34.000Z OR CreatedDate > 2026-03-23T17:01:34.000Z)
+          // `
+          // );
+
+          bulkQuery(`
+          SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
+               Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,
+               Campaign.Name, Campaign.Nome_da_Tag__c
+          FROM CampaignMember
+          WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
+              AND Campaign.IsActive = true
+              AND (CreatedDate > 2026-04-29T00:00:17.909Z)
+          `
+          );
+    triggers:
+      webhook:
+        type: webhook
+        webhook_reply: before_start
+        enabled: true
+    edges:
+      webhook->Transform-data:
+        source_trigger: webhook
+        target_job: Transform-data
+        condition_type: always
+        enabled: true
   "Remove-Deleted-Campaign-Members/Tags":
     name: 'Remove Deleted Campaign Members/Tags'
     jobs:
@@ -85,6 +127,21 @@ workflows:
         body:
           path: workflows/upsert-members/upsert-tags.js
 
+      Log-errors:
+        name: Log errors
+        adaptor: '@openfn/language-common@3.3.1'
+        credential: null
+        body: |
+          // Check out the Job Writing Guide for help getting started:
+          // https://docs.openfn.org/documentation/jobs/job-writing-guide
+
+          fn(state => {
+
+            console.log(state.data.errors)
+
+            return state;
+          })
+
     triggers:
       cron:
         type: cron
@@ -101,4 +158,12 @@ workflows:
         source_job: Get-members-for-upsert
         target_job: Add-or-update-member-tags
         condition_type: on_job_success
+        enabled: true
+      Add-or-update-member-tags->Log-errors:
+        source_job: Add-or-update-member-tags
+        target_job: Log-errors
+        condition_type: js_expression
+        condition_label: Has errors
+        condition_expression: |
+          !state.error && state.data.errors && state.data.errors.length > 0
         enabled: true

@@ -18,7 +18,7 @@ SELECT Id, Name, FirstName, LastName, Email, CreatedDate,
 FROM CampaignMember
 WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'
     AND Campaign.IsActive = true
-    AND (Contact.LastModifiedDate > ${state.cursor} OR CreatedDate > ${state.cursor})
+    AND (CreatedDate > ${state.cursor})
 `
 );
 

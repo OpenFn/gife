@@ -110,11 +110,43 @@
         }
       }
     },
+    "Event-based-workflow": {
+      "id": "18f2d075-87bb-4696-b793-1f073fd35ed7",
+      "name": "Event-based workflow",
+      "inserted_at": "2026-05-07T15:25:22.064027Z",
+      "lock_version": 13,
+      "triggers": {
+        "webhook": {
+          "enabled": true,
+          "id": "2d630b4d-583a-458a-8a4f-558b54b61a2d",
+          "type": "webhook",
+          "webhook_reply": "before_start"
+        }
+      },
+      "jobs": {
+        "Transform-data": {
+          "id": "b02d08b3-ab65-4465-8748-6b8c8a7404e6",
+          "name": "Transform data",
+          "body": "// Validate and transform the data you've received...\n// query(`\n// SELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n//      Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n//      Campaign.Name, Campaign.Nome_da_Tag__c\n// FROM CampaignMember\n// WHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n//     AND Campaign.IsActive = true\n//     AND Email= 'natalia@gife.org.br'\n//     AND (Contact.LastModifiedDate > 2026-03-23T17:01:34.000Z OR CreatedDate > 2026-03-23T17:01:34.000Z)\n// `\n// );\n\nbulkQuery(`\nSELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n     Campaign.Name, Campaign.Nome_da_Tag__c\nFROM CampaignMember\nWHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n    AND Campaign.IsActive = true\n    AND (CreatedDate > 2026-04-29T00:00:17.909Z)\n`\n);",
+          "project_credential_id": "5e1b9be4-0833-43ff-8d12-99b3e2fa6d32",
+          "adaptor": "@openfn/language-salesforce@4.8.6"
+        }
+      },
+      "edges": {
+        "webhook->Transform-data": {
+          "enabled": true,
+          "id": "ec5a5aaf-9b44-426c-8113-ca8eec20627f",
+          "target_job_id": "b02d08b3-ab65-4465-8748-6b8c8a7404e6",
+          "source_trigger_id": "2d630b4d-583a-458a-8a4f-558b54b61a2d",
+          "condition_type": "always"
+        }
+      }
+    },
     "Upsert-Members": {
       "id": "c1873753-c335-40ad-8fcc-bc3a347ca0e0",
       "name": "Upsert Members",
-      "inserted_at": "2026-04-30T14:34:55.435910Z",
-      "lock_version": 63,
+      "inserted_at": "2026-05-07T15:27:16.268608Z",
+      "lock_version": 72,
       "triggers": {
         "cron": {
           "enabled": true,
@@ -128,16 +160,23 @@
         "Get-members-for-upsert": {
           "id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
           "name": "Get members for upsert",
-          "body": "fn(state => {\n  const manualCursor = '2025-03-01T15:30:00.000Z';\n  //console.log(manualCursor, 'manualCursor');\n\n  const cursor = state.lastRunTime || manualCursor;\n  const lastRunTime = new Date().toISOString();\n  console.log('time at job start:: ', lastRunTime);\n  console.log('Cursor date to use in queries:: ', cursor);\n\n  return { ...state, cursor, lastRunTime };\n});\n\nbulkQuery(\n  state => `\nSELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n     Campaign.Name, Campaign.Nome_da_Tag__c\nFROM CampaignMember\nWHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n    AND Campaign.IsActive = true\n    AND (Contact.LastModifiedDate > ${state.cursor} OR CreatedDate > ${state.cursor})\n`\n);\n\n//Seperate members for each batch\nfn(state => {\n  const campaignMembers = state.data;\n  const membersToCreate = [];\n  const membersToUpdate = [];\n\n  console.log(campaignMembers.length, 'campaignMembers');\n\n  for (const member of campaignMembers) {\n    const mappedMember = {\n      email_address: member.Email,\n      full_name: member.Name,\n      merge_fields: {\n        FNAME: member.FirstName,\n        LNAME: member.LastName,\n        MMERGE4: member['Contact.AccountId'],\n      },\n      tags: [member['Campaign.Nome_da_tag__c']],\n    };\n    if (\n      member['Contact.LastModifiedDate'] > state.cursor ||\n      member.CreatedDate > state.cursor\n    ) {\n      membersToCreate.push({ ...mappedMember, status: 'subscribed' });\n    } else {\n      membersToUpdate.push(mappedMember);\n    }\n  }\n\n  console.log(membersToCreate.length, 'membersToCreate before merge tags');\n  console.log(membersToUpdate.length, 'membersToUpdate before merge tags');\n\n  let mergeCreateMemberTags = [];\n  let mergeUpdateMemberTags = [];\n\n  if (membersToCreate.length > 0) {\n    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n\n      return result;\n    }, []);\n  }\n\n  if (membersToUpdate.length > 0) {\n    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n      return result;\n    }, []);\n  }\n\n  console.log(\n    mergeCreateMemberTags.length,\n    'mergeCreateMemberTags after merge tags'\n  );\n\n  console.log(\n    mergeUpdateMemberTags.length,\n    'mergeUpdateMemberTags after merge tags'\n  );\n\n  return {\n    lastRunTime: state.lastRunTime,\n    members: [\n      ...chunk(mergeCreateMemberTags, 500),\n      ...chunk(mergeUpdateMemberTags, 500),\n    ],\n    chunkErrors: [],\n  };\n});\n",
+          "body": "fn(state => {\n  const manualCursor = '2025-03-01T15:30:00.000Z';\n  //console.log(manualCursor, 'manualCursor');\n\n  const cursor = state.lastRunTime || manualCursor;\n  const lastRunTime = new Date().toISOString();\n  console.log('time at job start:: ', lastRunTime);\n  console.log('Cursor date to use in queries:: ', cursor);\n\n  return { ...state, cursor, lastRunTime };\n});\n\nbulkQuery(\n  state => `\nSELECT Id, Name, FirstName, LastName, Email, CreatedDate,\n     Contact.AccountId, Contact.LastModifiedDate, Contact.CreatedDate,\n     Campaign.Name, Campaign.Nome_da_Tag__c\nFROM CampaignMember\nWHERE Campaign.RecordType.Name = 'Grupos, RTs ou Áreas Temáticas'\n    AND Campaign.IsActive = true\n    AND (CreatedDate > ${state.cursor})\n`\n);\n\n//Seperate members for each batch\nfn(state => {\n  const campaignMembers = state.data;\n  const membersToCreate = [];\n  const membersToUpdate = [];\n\n  console.log(campaignMembers.length, 'campaignMembers');\n\n  for (const member of campaignMembers) {\n    const mappedMember = {\n      email_address: member.Email,\n      full_name: member.Name,\n      merge_fields: {\n        FNAME: member.FirstName,\n        LNAME: member.LastName,\n        MMERGE4: member['Contact.AccountId'],\n      },\n      tags: [member['Campaign.Nome_da_tag__c']],\n    };\n    if (\n      member['Contact.LastModifiedDate'] > state.cursor ||\n      member.CreatedDate > state.cursor\n    ) {\n      membersToCreate.push({ ...mappedMember, status: 'subscribed' });\n    } else {\n      membersToUpdate.push(mappedMember);\n    }\n  }\n\n  console.log(membersToCreate.length, 'membersToCreate before merge tags');\n  console.log(membersToUpdate.length, 'membersToUpdate before merge tags');\n\n  let mergeCreateMemberTags = [];\n  let mergeUpdateMemberTags = [];\n\n  if (membersToCreate.length > 0) {\n    mergeCreateMemberTags = membersToCreate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n\n      return result;\n    }, []);\n  }\n\n  if (membersToUpdate.length > 0) {\n    mergeUpdateMemberTags = membersToUpdate.reduce((result, item) => {\n      const existingItem = result.find(\n        existing => existing.email_address === item.email_address\n      );\n\n      if (existingItem) {\n        existingItem.tags = [...new Set([...existingItem.tags, ...item.tags])];\n      } else {\n        result.push(item);\n      }\n      return result;\n    }, []);\n  }\n\n  console.log(\n    mergeCreateMemberTags.length,\n    'mergeCreateMemberTags after merge tags'\n  );\n\n  console.log(\n    mergeUpdateMemberTags.length,\n    'mergeUpdateMemberTags after merge tags'\n  );\n\n  return {\n    lastRunTime: state.lastRunTime,\n    members: [\n      ...chunk(mergeCreateMemberTags, 500),\n      ...chunk(mergeUpdateMemberTags, 500),\n    ],\n    chunkErrors: [],\n  };\n});\n",
           "project_credential_id": "5e1b9be4-0833-43ff-8d12-99b3e2fa6d32",
           "adaptor": "@openfn/language-salesforce@4.8.6"
         },
         "Add-or-update-member-tags": {
           "id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
           "name": "Add or update member tags",
-          "body": "// Add or Update members to Mailchimp\neach(\n  '$.members[*]',\n  post(\n    '/lists/43fead6cd7',\n    state => {\n      console.log(`Upserting ${state.data.length} members...`);\n      return {\n        sync_tags: false,\n        update_existing: true,\n        email_type: 'html',\n        members: state.data,\n      };\n    },\n    {},\n    state => {\n      if (state.response.total_created > 0)\n        console.log(`Added ${state.response.total_created} members`);\n      if (state.response.total_updated > 0)\n        console.log(`Updated ${state.response.total_updated} members`);\n\n      if (state.response.error_count > 0)\n        state.chunkErrors.push(state.response.errors);\n      return state;\n    }\n  )\n);\n\n// Alert admin if response has errors\nfn(state => {\n  // Check if chunks response has errors\n  const chunkErrors = state.chunkErrors.flat();\n  if (chunkErrors.length > 0) {\n    throw new Error(JSON.stringify(chunkErrors, null, 2));\n  }\n  // Advance the cursor only on full success\n  return { lastRunTime: state.lastRunTime };\n});\n",
+          "body": "// Add or Update members to Mailchimp\neach(\n  '$.members[*]',\n  post(\n    '/lists/43fead6cd7',\n    state => {\n      console.log(`Upserting ${state.data.length} members...`);\n      return {\n        sync_tags: false,\n        update_existing: true,\n        email_type: 'html',\n        members: state.data,\n      };\n    },\n    {},\n    state => {\n      if (state.response.body.total_created > 0)\n        console.log(`Added ${state.response.body.total_created} members`);\n      if (state.response.body.total_updated > 0)\n        console.log(`Updated ${state.response.body.total_updated} members`);\n\n      if (state.response.body.error_count > 0)\n        state.chunkErrors.push(state.response.body.errors);\n      return state;\n    }\n  )\n);\n\n// Alert admin if response has errors\nfn(state => {\n  // Check if chunks response has errors\n  const chunkErrors = state.chunkErrors.flat();\n  // if (chunkErrors.length > 0) {\n  //   throw new Error(JSON.stringify(chunkErrors, null, 2));\n  // }\n  // Advance the cursor only on full success\n  return { lastRunTime: state.lastRunTime, data: state.data };\n});\n",
           "project_credential_id": "b2f164e7-3e80-4aaf-8184-b4eb49b740e4",
           "adaptor": "@openfn/language-mailchimp@1.0.11"
+        },
+        "Log-errors": {
+          "id": "cb7d05f8-005d-4d6e-8d05-f4bd30ce00c8",
+          "name": "Log errors",
+          "body": "// Check out the Job Writing Guide for help getting started:\n// https://docs.openfn.org/documentation/jobs/job-writing-guide\n\nfn(state => {\n\n  console.log(state.data.errors)\n\n  return state;\n})\n",
+          "project_credential_id": null,
+          "adaptor": "@openfn/language-common@3.3.1"
         }
       },
       "edges": {
@@ -154,6 +193,15 @@
           "target_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
           "source_job_id": "767da658-51fe-49e6-a3a8-a90695c51dc7",
           "condition_type": "on_job_success"
+        },
+        "Add-or-update-member-tags->Log-errors": {
+          "enabled": true,
+          "id": "c326820d-cc51-4816-89b3-d750b185648e",
+          "target_job_id": "cb7d05f8-005d-4d6e-8d05-f4bd30ce00c8",
+          "source_job_id": "b302b4b7-aa10-499c-b91a-cc9f5cf3a50b",
+          "condition_type": "js_expression",
+          "condition_label": "Has errors",
+          "condition_expression": "!state.error && state.data.errors && state.data.errors.length > 0"
         }
       }
     }
